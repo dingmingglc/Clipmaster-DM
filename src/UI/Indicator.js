@@ -371,10 +371,23 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
             const [x, y] = button.get_transformed_position();
             const [w, h] = button.get_size();
-            this._tooltip.set_position(
-                Math.round(x + w / 2 - this._tooltip.width / 2),
-                Math.round(y + h + 5)
-            );
+            
+            // Calculate tooltip position - show below the button
+            let tooltipX = Math.round(x + w / 2 - this._tooltip.width / 2);
+            let tooltipY = Math.round(y + h + 5);
+            
+            // Make sure tooltip stays on screen
+            const monitor = Main.layoutManager.primaryMonitor;
+            if (tooltipX < 5) tooltipX = 5;
+            if (tooltipX + this._tooltip.width > monitor.width - 5) {
+                tooltipX = monitor.width - this._tooltip.width - 5;
+            }
+            if (tooltipY + this._tooltip.height > monitor.height - 5) {
+                // Show above the button if below would be off screen
+                tooltipY = Math.round(y - this._tooltip.height - 5);
+            }
+            
+            this._tooltip.set_position(tooltipX, tooltipY);
         } else {
             this._tooltip.visible = false;
         }

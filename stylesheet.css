@@ -548,12 +548,14 @@
 
 /* Tooltip */
 .clipmaster-tooltip {
-    background-color: rgba(30, 30, 46, 0.95);
+    background-color: rgba(30, 30, 46, 0.98);
     color: #cdd6f4;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
     border: 1px solid #45475a;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================
