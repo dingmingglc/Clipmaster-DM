@@ -1005,11 +1005,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (item.listId) {
             const list = this._database.getListById(item.listId);
             if (list && list.color) {
-                // Use 100% list color as background with contrast text color
-                const textColor = this._getContrastColor(list.color);
+                // Fixed color-to-text mapping for readability
+                const textColorMap = {
+                    '#e74c3c': '#ffffff', // red -> white
+                    '#e67e22': '#ffffff', // orange -> white
+                    '#f1c40f': '#1a1a1a', // yellow -> dark
+                    '#2ecc71': '#1a1a1a', // green -> dark
+                    '#3498db': '#ffffff', // blue -> white
+                    '#9b59b6': '#ffffff', // purple -> white
+                    '#95a5a6': '#1a1a1a'  // gray -> dark
+                };
+                const textColor = textColorMap[list.color] || '#ffffff';
                 row.set_style(`background-color: ${list.color}; color: ${textColor};`);
                 row._listColor = list.color;
-                row._textColor = textColor;
             }
         }
 
@@ -1546,15 +1554,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
             };
         }
         return { r: 0, g: 0, b: 0 };
-    }
-
-    _getContrastColor(hex) {
-        // Calculate relative luminance and return black or white for best contrast
-        const rgb = this._hexToRgb(hex);
-        // Using relative luminance formula: 0.299*R + 0.587*G + 0.114*B
-        const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-        // Return dark text for light backgrounds, light text for dark backgrounds
-        return luminance > 0.5 ? '#1a1a1a' : '#ffffff';
     }
 
     _mixColors(baseHex, colorHex, amount) {
