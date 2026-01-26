@@ -232,7 +232,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 this._extension._extensionPath + '/assets/icons/clipmaster-symbolic.svg'
             ),
             style_class: 'clipmaster-header-icon',
-            icon_size: 18
+            icon_size: 14
         });
         this._header.add_child(headerIcon);
 
