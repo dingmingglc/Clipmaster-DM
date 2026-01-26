@@ -446,13 +446,13 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _loadManageListsView() {
         // Check if we're in "add new list" mode
         if (this._addingNewList) {
-            this._showAddListForm();
+            this._buildAddListForm();
             return;
         }
         
         // Check if we're in "edit list" mode
         if (this._editingList) {
-            this._showEditListForm(this._editingList);
+            this._buildEditListForm(this._editingList);
             return;
         }
 
@@ -568,37 +568,72 @@ class ClipMasterIndicator extends PanelMenu.Button {
         return row;
     }
     
-    _showAddListForm() {
+    _buildAddListForm() {
+        // Header with back button
+        const headerRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-header',
+            x_expand: true
+        });
+
+        const backBtn = new St.Button({
+            style_class: 'clipmaster-filter-button',
+            label: _('← Back'),
+            can_focus: false
+        });
+        backBtn.connect('clicked', () => {
+            this._addingNewList = false;
+            this._loadItems();
+        });
+        headerRow.add_child(backBtn);
+
+        const headerLabel = new St.Label({
+            text: _('Add New List'),
+            style_class: 'clipmaster-lists-title',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        headerRow.add_child(headerLabel);
+
+        // Spacer for alignment
+        const spacerHeader = new St.Widget({ width: 60 });
+        headerRow.add_child(spacerHeader);
+
+        this._itemsBox.add_child(headerRow);
+
+        // Form container
         const formBox = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
             x_expand: true
         });
 
-        // Title
-        const titleLabel = new St.Label({
-            text: _('Add New List'),
-            style_class: 'clipmaster-lists-title',
+        // Name entry
+        const nameLabel = new St.Label({
+            text: _('List Name:'),
+            style_class: 'clipmaster-context-label',
             x_align: Clutter.ActorAlign.START
         });
-        formBox.add_child(titleLabel);
+        formBox.add_child(nameLabel);
 
-        // Name entry
         const nameEntry = new St.Entry({
             style_class: 'clipmaster-inline-entry',
-            hint_text: _('List name...'),
+            hint_text: _('Enter list name...'),
             x_expand: true,
             can_focus: true
         });
         formBox.add_child(nameEntry);
 
         // Color row
-        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 4, margin_top: 8 });
         const colorLabel = new St.Label({
             text: _('Color:'),
-            y_align: Clutter.ActorAlign.CENTER
+            style_class: 'clipmaster-context-label',
+            x_align: Clutter.ActorAlign.START,
+            margin_top: 12
         });
-        colorRow.add_child(colorLabel);
+        formBox.add_child(colorLabel);
+
+        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 6 });
 
         const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#95a5a6'];
         let selectedColor = colors[0];
@@ -623,40 +658,25 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         formBox.add_child(colorRow);
 
-        // Buttons row
-        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 12 });
-        const spacer = new St.Widget({ x_expand: true });
-        buttonsRow.add_child(spacer);
-
-        const cancelBtn = new St.Button({
-            style_class: 'clipmaster-filter-button',
-            label: _('Cancel'),
-            can_focus: false
-        });
-        cancelBtn.connect('clicked', () => {
-            this._addingNewList = false;
-            this._loadItems();
-        });
-        buttonsRow.add_child(cancelBtn);
-
+        // Create button
         const createBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
-            label: _('Create'),
-            can_focus: false
+            label: _('Create List'),
+            can_focus: false,
+            x_expand: true,
+            margin_top: 16
         });
-        createBtn.set_style('margin-left: 8px;');
         createBtn.connect('clicked', () => {
             const name = nameEntry.get_text().trim();
             if (name) {
                 this._database.createList(name, selectedColor);
                 this._buildListsBar();
+                this._addingNewList = false;
+                this._loadItems();
             }
-            this._addingNewList = false;
-            this._loadItems();
         });
-        buttonsRow.add_child(createBtn);
+        formBox.add_child(createBtn);
 
-        formBox.add_child(buttonsRow);
         this._itemsBox.add_child(formBox);
 
         // Focus on name entry
@@ -666,22 +686,54 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
     }
 
-    _showEditListForm(list) {
+    _buildEditListForm(list) {
+        // Header with back button
+        const headerRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-header',
+            x_expand: true
+        });
+
+        const backBtn = new St.Button({
+            style_class: 'clipmaster-filter-button',
+            label: _('← Back'),
+            can_focus: false
+        });
+        backBtn.connect('clicked', () => {
+            this._editingList = null;
+            this._loadItems();
+        });
+        headerRow.add_child(backBtn);
+
+        const headerLabel = new St.Label({
+            text: _('Edit List'),
+            style_class: 'clipmaster-lists-title',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        headerRow.add_child(headerLabel);
+
+        // Spacer for alignment
+        const spacerHeader = new St.Widget({ width: 60 });
+        headerRow.add_child(spacerHeader);
+
+        this._itemsBox.add_child(headerRow);
+
+        // Form container
         const formBox = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
             x_expand: true
         });
 
-        // Title
-        const titleLabel = new St.Label({
-            text: _('Edit List'),
-            style_class: 'clipmaster-lists-title',
+        // Name entry
+        const nameLabel = new St.Label({
+            text: _('List Name:'),
+            style_class: 'clipmaster-context-label',
             x_align: Clutter.ActorAlign.START
         });
-        formBox.add_child(titleLabel);
+        formBox.add_child(nameLabel);
 
-        // Name entry
         const nameEntry = new St.Entry({
             style_class: 'clipmaster-inline-entry',
             text: list.name,
@@ -691,12 +743,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
         formBox.add_child(nameEntry);
 
         // Color row
-        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 4, margin_top: 8 });
         const colorLabel = new St.Label({
             text: _('Color:'),
-            y_align: Clutter.ActorAlign.CENTER
+            style_class: 'clipmaster-context-label',
+            x_align: Clutter.ActorAlign.START,
+            margin_top: 12
         });
-        colorRow.add_child(colorLabel);
+        formBox.add_child(colorLabel);
+
+        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 6 });
 
         const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#95a5a6'];
         let selectedColor = list.color || colors[0];
@@ -721,40 +776,25 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         formBox.add_child(colorRow);
 
-        // Buttons row
-        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 12 });
-        const spacer = new St.Widget({ x_expand: true });
-        buttonsRow.add_child(spacer);
-
-        const cancelBtn = new St.Button({
-            style_class: 'clipmaster-filter-button',
-            label: _('Cancel'),
-            can_focus: false
-        });
-        cancelBtn.connect('clicked', () => {
-            this._editingList = null;
-            this._loadItems();
-        });
-        buttonsRow.add_child(cancelBtn);
-
+        // Save button
         const saveBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
-            label: _('Save'),
-            can_focus: false
+            label: _('Save Changes'),
+            can_focus: false,
+            x_expand: true,
+            margin_top: 16
         });
-        saveBtn.set_style('margin-left: 8px;');
         saveBtn.connect('clicked', () => {
             const name = nameEntry.get_text().trim();
             if (name) {
                 this._database.updateList(list.id, { name, color: selectedColor });
                 this._buildListsBar();
+                this._editingList = null;
+                this._loadItems();
             }
-            this._editingList = null;
-            this._loadItems();
         });
-        buttonsRow.add_child(saveBtn);
+        formBox.add_child(saveBtn);
 
-        formBox.add_child(buttonsRow);
         this._itemsBox.add_child(formBox);
 
         // Focus on name entry
