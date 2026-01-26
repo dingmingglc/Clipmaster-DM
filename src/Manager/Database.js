@@ -528,6 +528,36 @@ export class ClipboardDatabase {
         }
     }
 
+    /**
+     * Remove duplicate items, keeping the most recent one
+     * @returns {number} Number of duplicates removed
+     */
+    cleanupDuplicates() {
+        const seen = new Map();
+        const toRemove = [];
+
+        // Sort by created date (newest first) so we keep the newest version
+        const sorted = [...this._items].sort((a, b) => (b.created || 0) - (a.created || 0));
+
+        for (const item of sorted) {
+            const hash = item.contentHash || HashUtils.hashContent(item.content);
+            if (seen.has(hash)) {
+                // This is a duplicate (older), mark for removal
+                toRemove.push(item.id);
+            } else {
+                seen.set(hash, item.id);
+            }
+        }
+
+        if (toRemove.length > 0) {
+            this._items = this._items.filter(i => !toRemove.includes(i.id));
+            this._save();
+            debugLog(`cleanupDuplicates: Removed ${toRemove.length} duplicate items`);
+        }
+
+        return toRemove.length;
+    }
+
     toggleFavorite(itemId) {
         const item = this._items.find(i => i.id === itemId);
         if (item) {

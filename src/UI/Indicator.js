@@ -853,6 +853,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
     _onMenuOpened() {
         debugLog('Menu opened');
+        
+        // Cleanup duplicates on first open
+        if (!this._duplicatesCleanedUp && this._database) {
+            const removed = this._database.cleanupDuplicates();
+            if (removed > 0) {
+                debugLog(`Cleaned up ${removed} duplicate items`);
+            }
+            this._duplicatesCleanedUp = true;
+        }
+        
         this._searchEntry.set_text('');
         this._searchQuery = '';
         this._selectedIndex = 0;
