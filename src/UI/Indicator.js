@@ -1215,8 +1215,21 @@ class ClipMasterIndicator extends PanelMenu.Button {
         favButton.connect('button-press-event', (actor, event) => {
             if (event.get_button() === 1) {
                 const newState = this._database.toggleFavorite(item.id);
-                favIcon.icon_name = newState ? 'starred-symbolic' : 'non-starred-symbolic';
-                favIcon.style_class = newState ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive';
+                
+                // If we're in a type filter (not favorites or all), refresh to remove/show the item
+                if (this._currentType !== null && this._currentListId !== -1) {
+                    // Item was just favorited, remove it from current type filter
+                    if (newState) {
+                        this._loadItems();
+                    }
+                } else if (this._currentListId === -1 && !newState) {
+                    // In favorites view and item was unfavorited, remove it
+                    this._loadItems();
+                } else {
+                    // Just update the icon
+                    favIcon.icon_name = newState ? 'starred-symbolic' : 'non-starred-symbolic';
+                    favIcon.style_class = newState ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive';
+                }
                 return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
