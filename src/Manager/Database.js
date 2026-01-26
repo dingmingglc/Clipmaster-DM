@@ -403,6 +403,15 @@ export class ClipboardDatabase {
         }
     }
 
+    /**
+     * Move an item to the top of the list (public method)
+     * @param {number} itemId - The ID of the item to move
+     */
+    moveToTop(itemId) {
+        this._moveToTop(itemId);
+        this._save();
+    }
+
     getItems(options = {}) {
         // Return mostly from _items. Pending items are not shown until loaded.
         let items = [...this._items];

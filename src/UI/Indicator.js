@@ -1798,6 +1798,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             useCount: (item.useCount || 1) + 1
         });
 
+        // Move item to top of the list
+        this._database.moveToTop(item.id);
+
         const closeOnPaste = this._settings.get_boolean('close-on-paste');
 
         if (closeOnPaste && !fromHover && !this._isPinned) {
