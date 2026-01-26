@@ -1177,7 +1177,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 reactive: true,
                 track_hover: true
             });
-            qrButton.set_child(new St.Icon({ icon_name: 'view-grid-symbolic', icon_size: iconSize }));
+            const qrIcon = new St.Icon({ icon_name: 'view-grid-symbolic', icon_size: iconSize });
+            if (listTextColor) qrIcon.set_style(`color: ${listTextColor};`);
+            qrButton.set_child(qrIcon);
             qrButton._tooltipText = _('QR Code');
             qrButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
             qrButton.connect('button-press-event', (actor, event) => {
@@ -1211,6 +1213,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             icon_size: iconSize,
             style_class: item.isFavorite ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive'
         });
+        if (listTextColor) favIcon.set_style(`color: ${listTextColor};`);
         favButton.set_child(favIcon);
         favButton._tooltipText = item.isFavorite ? _('Unfavorite') : _('Favorite');
         favButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
@@ -1245,7 +1248,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             reactive: true,
             track_hover: true
         });
-        deleteButton.set_child(new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: iconSize }));
+        const deleteIcon = new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: iconSize });
+        if (listTextColor) deleteIcon.set_style(`color: ${listTextColor};`);
+        deleteButton.set_child(deleteIcon);
         deleteButton._tooltipText = _('Delete');
         deleteButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
         deleteButton.connect('button-press-event', (actor, event) => {
