@@ -1001,12 +1001,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
         row._item = item;
         row._index = index;
 
-        // Apply list color as left border if item belongs to a list
+        // Apply list color as background if item belongs to a list
         if (item.listId) {
             const list = this._database.getListById(item.listId);
             if (list && list.color) {
-                // Use left border instead of background to avoid dark color mixing
-                row.set_style(`border-left: 4px solid ${list.color}; padding-left: 8px;`);
+                // Use 100% list color as background
+                row.set_style(`background-color: ${list.color};`);
                 row._listColor = list.color;
             }
         }
