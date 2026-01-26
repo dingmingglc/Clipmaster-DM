@@ -573,7 +573,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._createListForm = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
-            x_expand: true
+            x_expand: true,
+            reactive: true
         });
 
         // Name row
@@ -669,11 +670,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._createListForm.add_child(buttonsRow);
 
-        // Insert after header (use the same insertion style as QR panel for reliability)
+        // Insert after header row (header is at index 0)
         const children = this._itemsBox.get_children();
-        const afterHeader = children.length > 1 ? children[1] : null;
-        if (afterHeader) {
-            this._itemsBox.insert_child_above(this._createListForm, afterHeader);
+        if (children.length > 0) {
+            // Insert below the header (first child)
+            this._itemsBox.insert_child_below(this._createListForm, children[0]);
         } else {
             this._itemsBox.add_child(this._createListForm);
         }
@@ -695,7 +696,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._editListForm = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
-            x_expand: true
+            x_expand: true,
+            reactive: true
         });
 
         // Name row
@@ -791,15 +793,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._editListForm.add_child(buttonsRow);
 
-        // Insert after the row being edited (use insert_child_above like QR panel)
-        const children = this._itemsBox.get_children();
-        const rowIndex = children.indexOf(afterRow);
-        const nextSibling = rowIndex >= 0 ? children[rowIndex + 1] : null;
-        if (nextSibling) {
-            this._itemsBox.insert_child_above(this._editListForm, nextSibling);
-        } else {
-            this._itemsBox.add_child(this._editListForm);
-        }
+        // Insert directly below the row being edited
+        this._itemsBox.insert_child_below(this._editListForm, afterRow);
 
         // Focus on name entry
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
