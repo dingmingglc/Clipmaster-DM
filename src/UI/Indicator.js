@@ -467,11 +467,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-action-button',
             child: new St.Icon({ icon_name: 'list-add-symbolic', icon_size: 14 }),
             can_focus: false,
-            track_hover: true
+            track_hover: true,
+            reactive: true
         });
         addListBtn._tooltipText = _('Add new list');
         addListBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        addListBtn.connect('clicked', () => this._showCreateListDialog());
+        addListBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._showCreateListDialog();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
         headerRow.add_child(addListBtn);
 
         const closeBtn = new St.Button({
@@ -541,13 +548,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     style_class: 'clipmaster-action-button',
                     child: new St.Icon({ icon_name: 'document-edit-symbolic', icon_size: 12 }),
                     can_focus: false,
-                    track_hover: true
+                    track_hover: true,
+                    reactive: true
                 });
                 editBtn._tooltipText = _('Edit');
                 editBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-                editBtn.connect('clicked', () => {
-                    this._closeListsPanel();
-                    this._showEditListDialog(list);
+                editBtn.connect('button-press-event', (actor, event) => {
+                    if (event.get_button() === 1) {
+                        this._closeListsPanel();
+                        this._showEditListDialog(list);
+                        return Clutter.EVENT_STOP;
+                    }
+                    return Clutter.EVENT_PROPAGATE;
                 });
                 listRow.add_child(editBtn);
 
@@ -556,21 +568,26 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     style_class: 'clipmaster-action-button clipmaster-delete-button',
                     child: new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: 12 }),
                     can_focus: false,
-                    track_hover: true
+                    track_hover: true,
+                    reactive: true
                 });
                 deleteBtn._tooltipText = _('Delete');
                 deleteBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-                deleteBtn.connect('clicked', () => {
-                    this._database.deleteList(list.id);
-                    // Reset filter if this list was selected
-                    if (this._currentListId === list.id) {
-                        this._currentListId = null;
-                        this._currentType = ItemType.TEXT;
-                        this._textButton.add_style_class_name('active');
+                deleteBtn.connect('button-press-event', (actor, event) => {
+                    if (event.get_button() === 1) {
+                        this._database.deleteList(list.id);
+                        // Reset filter if this list was selected
+                        if (this._currentListId === list.id) {
+                            this._currentListId = null;
+                            this._currentType = ItemType.TEXT;
+                            this._textButton.add_style_class_name('active');
+                        }
+                        this._buildListsBar(); // Refresh lists bar
+                        this._closeListsPanel();
+                        this._toggleListsPanel(); // Refresh panel
+                        return Clutter.EVENT_STOP;
                     }
-                    this._buildListsBar(); // Refresh lists bar
-                    this._closeListsPanel();
-                    this._toggleListsPanel(); // Refresh panel
+                    return Clutter.EVENT_PROPAGATE;
                 });
                 listRow.add_child(deleteBtn);
 
@@ -1061,7 +1078,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (item.listId) {
             const list = this._database.getListById(item.listId);
             if (list && list.color) {
-                row.set_style(`background-color: ${this._hexToRgba(list.color, 0.15)};`);
+                // Mix list color with base background (#242424) to avoid transparency issues
+                const mixedColor = this._mixColors('#242424', list.color, 0.2);
+                row.set_style(`background-color: ${mixedColor};`);
                 row._listColor = list.color;
             }
         }
@@ -1583,6 +1602,36 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
         
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    _hexToRgb(hex) {
+        hex = hex.replace('#', '');
+        if (hex.length === 3) {
+            return {
+                r: parseInt(hex[0] + hex[0], 16),
+                g: parseInt(hex[1] + hex[1], 16),
+                b: parseInt(hex[2] + hex[2], 16)
+            };
+        } else if (hex.length === 6) {
+            return {
+                r: parseInt(hex.substring(0, 2), 16),
+                g: parseInt(hex.substring(2, 4), 16),
+                b: parseInt(hex.substring(4, 6), 16)
+            };
+        }
+        return { r: 0, g: 0, b: 0 };
+    }
+
+    _mixColors(baseHex, colorHex, amount) {
+        // Mix two colors: result = base * (1-amount) + color * amount
+        const base = this._hexToRgb(baseHex);
+        const color = this._hexToRgb(colorHex);
+        
+        const r = Math.round(base.r * (1 - amount) + color.r * amount);
+        const g = Math.round(base.g * (1 - amount) + color.g * amount);
+        const b = Math.round(base.b * (1 - amount) + color.b * amount);
+        
+        return `rgb(${r}, ${g}, ${b})`;
     }
 
     _updateSelection() {
