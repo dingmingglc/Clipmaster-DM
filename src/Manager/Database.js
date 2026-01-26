@@ -420,6 +420,14 @@ export class ClipboardDatabase {
             // CODE category includes both CODE and HTML types
             if (options.type === ItemType.CODE) {
                 items = items.filter(i => i.type === ItemType.CODE || i.type === ItemType.HTML);
+            } else if (options.type === ItemType.TEXT && options.textIncludeUrlCode) {
+                // TEXT filter includes URL and CODE when setting is enabled
+                items = items.filter(i => 
+                    i.type === ItemType.TEXT || 
+                    i.type === ItemType.URL || 
+                    i.type === ItemType.CODE ||
+                    i.type === ItemType.HTML
+                );
             } else {
                 items = items.filter(i => i.type === options.type);
             }

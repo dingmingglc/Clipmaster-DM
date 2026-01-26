@@ -166,6 +166,14 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
         settings.bind('close-on-paste', closeOnPasteRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         popupGroup.add(closeOnPasteRow);
 
+        // Text includes URL and Code
+        const textIncludeRow = new Adw.SwitchRow({
+            title: _('Text Includes URL & Code'),
+            subtitle: _('Show URL and Code items in Text filter')
+        });
+        settings.bind('text-include-url-code', textIncludeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        popupGroup.add(textIncludeRow);
+
         // Notifications
         const notificationRow = new Adw.SwitchRow({
             title: _('Show Notifications'),

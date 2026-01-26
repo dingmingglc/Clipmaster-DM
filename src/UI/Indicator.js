@@ -1115,11 +1115,13 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
 
         const limit = this._settings.get_int('items-per-page') || 50;
+        const textIncludeUrlCode = this._settings.get_boolean('text-include-url-code');
         const options = {
             limit: limit,
             search: this._searchQuery || null,
             listId: this._currentListId,
             type: this._currentType,
+            textIncludeUrlCode: textIncludeUrlCode,
             // Exclude favorites from type filters (they have their own tab)
             excludeFavorites: this._currentType !== null && this._currentListId !== -1
         };

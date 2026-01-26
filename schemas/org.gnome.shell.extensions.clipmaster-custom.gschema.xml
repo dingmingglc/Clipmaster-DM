@@ -102,6 +102,12 @@
     
     <!-- Display Settings -->
     
+    <key name="text-include-url-code" type="b">
+      <default>false</default>
+      <summary>Text includes URL and Code</summary>
+      <description>When enabled, Text filter will also include URL and Code types</description>
+    </key>
+    
     <key name="preview-length" type="i">
       <default>80</default>
       <range min="20" max="500"/>
