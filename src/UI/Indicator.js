@@ -357,15 +357,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._allButton.connect('clicked', () => this._setFilter(null));
         filterBar.add_child(this._allButton);
 
-        // Lists management button (at the end)
-        this._listsManageButton = new St.Button({
-            style_class: 'clipmaster-filter-button',
-            label: _('Lists'),
-            can_focus: false
-        });
-        this._listsManageButton.connect('clicked', () => this._setFilter(null, null, true));
-        filterBar.add_child(this._listsManageButton);
-
         this._filterBar = filterBar;
         this._filterBarContainer.add_child(filterBar);
 
@@ -854,7 +845,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         // Reset filter buttons
         [this._allButton, this._favButton, this._textButton, this._imageButton,
-         this._urlButton, this._codeButton, this._listsManageButton].forEach(b => {
+         this._urlButton, this._codeButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
         
@@ -910,7 +901,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         // Clear all filter button states
         [this._allButton, this._favButton, this._textButton, this._imageButton, 
-         this._urlButton, this._codeButton, this._listsManageButton].forEach(b => {
+         this._urlButton, this._codeButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
 
@@ -928,8 +919,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         if (manageMode) {
             // Manage lists mode
-            if (this._listsManageButton) {
-                this._listsManageButton.add_style_class_name('active');
+            if (this._manageListsBtn) {
+                this._manageListsBtn.add_style_class_name('active');
             }
         } else if (listId === -1) {
             // Favorites
