@@ -396,14 +396,17 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 track_hover: true
             });
 
-            // Set background color from list color
-            if (list.color) {
-                btn.set_style(`background-color: ${list.color};`);
-            }
+            // Set background color from list color (use !important equivalent with full style)
+            const color = list.color || '#6c7086';
+            btn.set_style(`
+                background-color: ${color} !important;
+                background: ${color} !important;
+            `);
 
             const label = new St.Label({
                 text: list.name,
-                y_align: Clutter.ActorAlign.CENTER
+                y_align: Clutter.ActorAlign.CENTER,
+                style_class: 'clipmaster-list-tag-label'
             });
             btn.set_child(label);
             btn._listId = list.id;
@@ -437,7 +440,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._closeContextPanel();
         this._closeQrPanel();
-        this._closeListsDropdown();
         this._closeCreateListPanel();
 
         this._listsPanel = new St.BoxLayout({
@@ -595,7 +597,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _showCreateListDialog() {
         this._closeListsPanel();
         this._closeCreateListPanel();
-        this._closeListsDropdown();
 
         // Create inline dialog
         this._createListPanel = new St.BoxLayout({
@@ -726,7 +727,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _showEditListDialog(list) {
         this._closeListsPanel();
         this._closeCreateListPanel();
-        this._closeListsDropdown();
 
         // Create inline dialog
         this._createListPanel = new St.BoxLayout({
