@@ -892,14 +892,35 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
     }
 
-    // Override menu close to respect pin state
+    _actorIsInsideMenu(actor) {
+        if (!actor || !this.menu)
+            return false;
+
+        // PopupMenu provides both actor and box; be defensive.
+        const menuActor = this.menu.actor || null;
+        const menuBox = this.menu.box || null;
+
+        let a = actor;
+        while (a) {
+            if (a === menuActor || a === menuBox)
+                return true;
+            a = a.get_parent?.() ?? null;
+        }
+        return false;
+    }
+
+    // Only toggle menu when clicking the panel button itself.
+    // Do NOT swallow clicks inside the menu (they must reach buttons/entries).
     vfunc_event(event) {
-        if (event.type() === Clutter.EventType.BUTTON_PRESS) {
-            const button = event.get_button();
-            if (button === 1) {
-                this.menu.toggle();
-                return Clutter.EVENT_STOP;
-            }
+        if (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === 1) {
+            const source = event.get_source?.() ?? null;
+
+            // If the click originates from inside the popup menu, let it propagate.
+            if (this._actorIsInsideMenu(source))
+                return super.vfunc_event(event);
+
+            this.menu.toggle();
+            return Clutter.EVENT_STOP;
         }
         return super.vfunc_event(event);
     }
