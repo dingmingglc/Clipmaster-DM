@@ -150,25 +150,27 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         const theme = this._settings.get_string('theme');
         
-        // Check manual toggle first
-        let isLight = this._manualLightMode || false;
+        // Determine light/dark based on theme mode
+        let isLight = false;
         
-        // If not manually set, check follow system setting
-        if (!this._manualLightMode && this._manualLightMode !== false) {
-            const followSystem = this._settings.get_boolean('follow-system-theme');
-            if (followSystem) {
-                const colorScheme = this._interfaceSettings.get_string('color-scheme');
-                const gtkTheme = this._interfaceSettings.get_string('gtk-theme');
-                
-                if (colorScheme === 'prefer-light') {
-                    isLight = true;
-                } else if (colorScheme === 'default') {
-                    isLight = gtkTheme && !gtkTheme.toLowerCase().includes('dark');
-                }
+        if (this._themeMode === 'light') {
+            isLight = true;
+        } else if (this._themeMode === 'dark') {
+            isLight = false;
+        } else {
+            // Auto mode - follow system
+            const colorScheme = this._interfaceSettings.get_string('color-scheme');
+            const gtkTheme = this._interfaceSettings.get_string('gtk-theme');
+            
+            if (colorScheme === 'prefer-light') {
+                isLight = true;
+            } else if (colorScheme === 'default') {
+                isLight = gtkTheme && !gtkTheme.toLowerCase().includes('dark');
             }
+            // colorScheme === 'prefer-dark' -> isLight stays false
         }
         
-        debugLog(`_applyTheme: isLight=${isLight}, manualLightMode=${this._manualLightMode}`);
+        debugLog(`_applyTheme: themeMode=${this._themeMode}, isLight=${isLight}`);
         
         if (isLight) {
             this._contentBox.add_style_class_name('light');
@@ -189,13 +191,23 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _updateThemeToggleIcon() {
         if (!this._themeToggleButton) return;
         
-        const isLight = this._manualLightMode || false;
-        const iconName = isLight ? 'weather-clear-night-symbolic' : 'weather-clear-symbolic';
+        let iconName, tooltip;
+        if (this._themeMode === 'dark') {
+            iconName = 'weather-clear-night-symbolic';
+            tooltip = _('Dark mode (click for Light)');
+        } else if (this._themeMode === 'light') {
+            iconName = 'weather-clear-symbolic';
+            tooltip = _('Light mode (click for Auto)');
+        } else {
+            iconName = 'emblem-system-symbolic';
+            tooltip = _('Follow system (click for Dark)');
+        }
         
         this._themeToggleButton.set_child(new St.Icon({ 
             icon_name: iconName, 
             icon_size: 16 
         }));
+        this._themeToggleButton._tooltipText = tooltip;
     }
 
     _updateSize() {
@@ -232,17 +244,24 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         this._header.add_child(title);
 
-        // Dark/Light toggle button
+        // Dark/Light/Auto toggle button
         this._themeToggleButton = new St.Button({
             style_class: 'clipmaster-toggle-button',
             can_focus: false,
             track_hover: true
         });
+        this._themeMode = 'auto'; // 'dark', 'light', 'auto'
         this._updateThemeToggleIcon();
-        this._themeToggleButton._tooltipText = _('Toggle Dark/Light');
         this._themeToggleButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
         this._themeToggleButton.connect('clicked', () => {
-            this._manualLightMode = !this._manualLightMode;
+            // Cycle: auto -> dark -> light -> auto
+            if (this._themeMode === 'auto') {
+                this._themeMode = 'dark';
+            } else if (this._themeMode === 'dark') {
+                this._themeMode = 'light';
+            } else {
+                this._themeMode = 'auto';
+            }
             this._applyTheme();
             this._updateThemeToggleIcon();
         });
@@ -919,23 +938,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._duplicatesCleanedUp = true;
         }
         
-        // Initialize manual light mode based on system if not set
-        if (this._manualLightMode === undefined) {
-            const followSystem = this._settings.get_boolean('follow-system-theme');
-            if (followSystem) {
-                const colorScheme = this._interfaceSettings.get_string('color-scheme');
-                const gtkTheme = this._interfaceSettings.get_string('gtk-theme');
-                if (colorScheme === 'prefer-light') {
-                    this._manualLightMode = true;
-                } else if (colorScheme === 'default') {
-                    this._manualLightMode = gtkTheme && !gtkTheme.toLowerCase().includes('dark');
-                } else {
-                    this._manualLightMode = false;
-                }
-            } else {
-                this._manualLightMode = false;
-            }
+        // Initialize theme mode if not set (default to auto)
+        if (!this._themeMode) {
+            this._themeMode = 'auto';
             this._updateThemeToggleIcon();
+            this._applyTheme();
         }
         
         this._searchEntry.set_text('');
