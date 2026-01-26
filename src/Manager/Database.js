@@ -324,11 +324,20 @@ export class ClipboardDatabase {
     addItem(item) {
         if (!this._items) return null;
 
-        const contentHash = HashUtils.hashContent(item.content);
+        // Use Title + Content combination for uniqueness
+        const combinedContent = (item.title || '') + '||' + (item.content || '');
+        const contentHash = HashUtils.hashContent(combinedContent);
 
         // Check both main items and pending items for duplicates
-        const existing = this._items.find(i => i.contentHash === contentHash || i.hash === contentHash) ||
-            this._pendingItems.find(i => i.contentHash === contentHash || i.hash === contentHash);
+        const existing = this._items.find(i => {
+            const iCombined = (i.title || '') + '||' + (i.content || '');
+            const iHash = HashUtils.hashContent(iCombined);
+            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
+        }) || this._pendingItems.find(i => {
+            const iCombined = (i.title || '') + '||' + (i.content || '');
+            const iHash = HashUtils.hashContent(iCombined);
+            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
+        });
 
         let skipDuplicates = true;
         if (this._settings) {
@@ -530,6 +539,7 @@ export class ClipboardDatabase {
 
     /**
      * Remove duplicate items, keeping the most recent one
+     * Uses Title + Content combination for uniqueness
      * @returns {number} Number of duplicates removed
      */
     cleanupDuplicates() {
@@ -540,7 +550,9 @@ export class ClipboardDatabase {
         const sorted = [...this._items].sort((a, b) => (b.created || 0) - (a.created || 0));
 
         for (const item of sorted) {
-            const hash = item.contentHash || HashUtils.hashContent(item.content);
+            // Use Title + Content combination for uniqueness check
+            const combinedContent = (item.title || '') + '||' + (item.content || '');
+            const hash = HashUtils.hashContent(combinedContent);
             if (seen.has(hash)) {
                 // This is a duplicate (older), mark for removal
                 toRemove.push(item.id);
