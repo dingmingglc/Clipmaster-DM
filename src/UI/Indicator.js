@@ -889,41 +889,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
     }
 
-    _actorIsInsideMenu(actor) {
-        if (!actor || !this.menu)
-            return false;
-
-        // PopupMenu provides both actor and box; be defensive.
-        const menuActor = this.menu.actor || null;
-        const menuBox = this.menu.box || null;
-
-        let a = actor;
-        while (a) {
-            if (a === menuActor || a === menuBox)
-                return true;
-            a = a.get_parent?.() ?? null;
-        }
-        return false;
-    }
-
-    // Only toggle menu when clicking the panel button itself.
-    // Do NOT swallow clicks inside the menu (they must reach buttons/entries).
+    // Only handle clicks when menu is closed (to open it).
+    // When menu is open, let all clicks propagate normally to buttons inside.
     vfunc_event(event) {
         if (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === 1) {
-            // Determine real clicked actor via stage picking.
-            // (event.get_source() is not reliable across Shell versions/themes)
-            let clickedActor = null;
-            try {
-                const [stageX, stageY] = event.get_coords();
-                clickedActor = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, stageX, stageY);
-            } catch (e) {
-                clickedActor = null;
+            // If menu is already open, let clicks propagate normally (don't intercept)
+            if (this.menu.isOpen) {
+                return Clutter.EVENT_PROPAGATE;
             }
-
-            // If the click originates from inside the popup menu, let it propagate.
-            if (this._actorIsInsideMenu(clickedActor))
-                return super.vfunc_event(event);
-
+            
+            // Menu is closed, open it
             this.menu.toggle();
             return Clutter.EVENT_STOP;
         }
