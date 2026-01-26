@@ -118,6 +118,13 @@ class ClipMasterIndicator extends PanelMenu.Button {
         );
 
         this._signalManager.connect(
+            this._interfaceSettings,
+            'changed::gtk-theme',
+            () => this._applyTheme(),
+            'gtk-theme-changed'
+        );
+
+        this._signalManager.connect(
             this._settings,
             'changed::follow-system-theme',
             () => this._applyTheme(),
@@ -142,16 +149,41 @@ class ClipMasterIndicator extends PanelMenu.Button {
         themeClasses.forEach(cls => this._contentBox.remove_style_class_name(cls));
 
         const followSystem = this._settings.get_boolean('follow-system-theme');
+        const theme = this._settings.get_string('theme');
+
+        debugLog(`_applyTheme: followSystem=${followSystem}, theme=${theme}`);
 
         if (followSystem) {
             const colorScheme = this._interfaceSettings.get_string('color-scheme');
+            const gtkTheme = this._interfaceSettings.get_string('gtk-theme');
+            debugLog(`_applyTheme: colorScheme=${colorScheme}, gtkTheme=${gtkTheme}`);
+            
+            // Determine if we should use light theme
+            let isLight = false;
             if (colorScheme === 'prefer-light') {
-                this._contentBox.add_style_class_name('light');
+                isLight = true;
+            } else if (colorScheme === 'default') {
+                // Check GTK theme name - if it doesn't contain 'dark', assume light
+                isLight = gtkTheme && !gtkTheme.toLowerCase().includes('dark');
             }
-        } else {
-            const theme = this._settings.get_string('theme');
+            // colorScheme === 'prefer-dark' -> isLight stays false
+            
+            if (isLight) {
+                this._contentBox.add_style_class_name('light');
+                debugLog('_applyTheme: Applied light theme');
+            } else {
+                debugLog('_applyTheme: Applied dark theme (system)');
+            }
+            
+            // Also apply the selected theme style on top
             if (theme && theme !== 'default') {
                 this._contentBox.add_style_class_name(`theme-${theme}`);
+                debugLog(`_applyTheme: Also applied theme-${theme}`);
+            }
+        } else {
+            if (theme && theme !== 'default') {
+                this._contentBox.add_style_class_name(`theme-${theme}`);
+                debugLog(`_applyTheme: Applied theme-${theme}`);
             }
         }
 
