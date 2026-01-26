@@ -101,11 +101,6 @@
     </key>
     
     <!-- Display Settings -->
-    <key name="popup-at-cursor" type="b">
-      <default>true</default>
-      <summary>Show popup at cursor</summary>
-      <description>Show popup at current mouse position instead of center</description>
-    </key>
     
     <key name="preview-length" type="i">
       <default>80</default>

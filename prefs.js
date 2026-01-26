@@ -150,14 +150,6 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
         });
         behaviorPage.add(popupGroup);
 
-        // Popup at cursor
-        const popupAtCursorRow = new Adw.SwitchRow({
-            title: _('Show at Cursor Position'),
-            subtitle: _('Open popup where the mouse is')
-        });
-        settings.bind('popup-at-cursor', popupAtCursorRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        popupGroup.add(popupAtCursorRow);
-
         // Paste on select
         const pasteOnSelectRow = new Adw.SwitchRow({
             title: _('Paste on Selection'),
