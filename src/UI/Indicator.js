@@ -1013,7 +1013,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     '#2ecc71': '#1a1a1a', // green -> dark
                     '#3498db': '#ffffff', // blue -> white
                     '#9b59b6': '#ffffff', // purple -> white
-                    '#95a5a6': '#1a1a1a'  // gray -> dark
+                    '#95a5a6': '#ffffff'  // gray -> white
                 };
                 const textColor = textColorMap[list.color] || '#ffffff';
                 row.set_style(`background-color: ${list.color}; color: ${textColor};`);
