@@ -453,9 +453,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-filter-button active',
             label: _('+ Add List'),
             can_focus: false,
-            track_hover: true
+            track_hover: true,
+            reactive: true
         });
-        addListBtn.connect('clicked', () => this._showCreateListInline());
+        addListBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._showCreateListInline();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
         headerRow.add_child(addListBtn);
 
         this._itemsBox.add_child(headerRow);
@@ -518,11 +525,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-action-button',
             child: new St.Icon({ icon_name: 'document-edit-symbolic', icon_size: 14 }),
             can_focus: false,
-            track_hover: true
+            track_hover: true,
+            reactive: true
         });
         editBtn._tooltipText = _('Edit');
         editBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        editBtn.connect('clicked', () => this._showEditListInline(list, row));
+        editBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._showEditListInline(list, row);
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
         row.add_child(editBtn);
 
         // Delete button
@@ -530,14 +544,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-action-button clipmaster-delete-button',
             child: new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: 14 }),
             can_focus: false,
-            track_hover: true
+            track_hover: true,
+            reactive: true
         });
         deleteBtn._tooltipText = _('Delete');
         deleteBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        deleteBtn.connect('clicked', () => {
-            this._database.deleteList(list.id);
-            this._buildListsBar();
-            this._loadItems(); // Refresh view
+        deleteBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._database.deleteList(list.id);
+                this._buildListsBar();
+                this._loadItems(); // Refresh view
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
         row.add_child(deleteBtn);
 
@@ -585,17 +604,22 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const colorBtn = new St.Button({
                 style_class: 'clipmaster-color-button',
                 style: `background-color: ${color};`,
-                can_focus: false
+                can_focus: false,
+                reactive: true
             });
             if (color === selectedColor) {
                 colorBtn.add_style_class_name('selected');
             }
-            colorBtn.connect('clicked', () => {
-                colorRow.get_children().forEach(c => {
-                    if (c instanceof St.Button) c.remove_style_class_name('selected');
-                });
-                colorBtn.add_style_class_name('selected');
-                selectedColor = color;
+            colorBtn.connect('button-press-event', (actor, event) => {
+                if (event.get_button() === 1) {
+                    colorRow.get_children().forEach(c => {
+                        if (c instanceof St.Button) c.remove_style_class_name('selected');
+                    });
+                    colorBtn.add_style_class_name('selected');
+                    selectedColor = color;
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
             });
             colorRow.add_child(colorBtn);
         });
@@ -609,11 +633,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
         const cancelBtn = new St.Button({
             style_class: 'clipmaster-filter-button',
             label: _('Cancel'),
-            can_focus: false
+            can_focus: false,
+            reactive: true
         });
-        cancelBtn.connect('clicked', () => {
-            this._createListForm.destroy();
-            this._createListForm = null;
+        cancelBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._createListForm.destroy();
+                this._createListForm = null;
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
         buttonsRow.add_child(cancelBtn);
 
@@ -621,15 +650,20 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-filter-button active',
             label: _('Create'),
             can_focus: false,
-            margin_left: 8
+            reactive: true
         });
-        createBtn.connect('clicked', () => {
-            const name = nameEntry.get_text().trim();
-            if (name) {
-                this._database.createList(name, selectedColor);
-                this._buildListsBar();
-                this._loadItems(); // Refresh view
+        createBtn.set_style('margin-left: 8px;');
+        createBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                const name = nameEntry.get_text().trim();
+                if (name) {
+                    this._database.createList(name, selectedColor);
+                    this._buildListsBar();
+                    this._loadItems(); // Refresh view
+                }
+                return Clutter.EVENT_STOP;
             }
+            return Clutter.EVENT_PROPAGATE;
         });
         buttonsRow.add_child(createBtn);
 
@@ -691,17 +725,22 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const colorBtn = new St.Button({
                 style_class: 'clipmaster-color-button',
                 style: `background-color: ${color};`,
-                can_focus: false
+                can_focus: false,
+                reactive: true
             });
             if (color === selectedColor) {
                 colorBtn.add_style_class_name('selected');
             }
-            colorBtn.connect('clicked', () => {
-                colorRow.get_children().forEach(c => {
-                    if (c instanceof St.Button) c.remove_style_class_name('selected');
-                });
-                colorBtn.add_style_class_name('selected');
-                selectedColor = color;
+            colorBtn.connect('button-press-event', (actor, event) => {
+                if (event.get_button() === 1) {
+                    colorRow.get_children().forEach(c => {
+                        if (c instanceof St.Button) c.remove_style_class_name('selected');
+                    });
+                    colorBtn.add_style_class_name('selected');
+                    selectedColor = color;
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
             });
             colorRow.add_child(colorBtn);
         });
@@ -715,11 +754,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
         const cancelBtn = new St.Button({
             style_class: 'clipmaster-filter-button',
             label: _('Cancel'),
-            can_focus: false
+            can_focus: false,
+            reactive: true
         });
-        cancelBtn.connect('clicked', () => {
-            this._editListForm.destroy();
-            this._editListForm = null;
+        cancelBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                this._editListForm.destroy();
+                this._editListForm = null;
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
         buttonsRow.add_child(cancelBtn);
 
@@ -727,15 +771,20 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-filter-button active',
             label: _('Save'),
             can_focus: false,
-            margin_left: 8
+            reactive: true
         });
-        saveBtn.connect('clicked', () => {
-            const name = nameEntry.get_text().trim();
-            if (name) {
-                this._database.updateList(list.id, { name, color: selectedColor });
-                this._buildListsBar();
-                this._loadItems(); // Refresh view
+        saveBtn.set_style('margin-left: 8px;');
+        saveBtn.connect('button-press-event', (actor, event) => {
+            if (event.get_button() === 1) {
+                const name = nameEntry.get_text().trim();
+                if (name) {
+                    this._database.updateList(list.id, { name, color: selectedColor });
+                    this._buildListsBar();
+                    this._loadItems(); // Refresh view
+                }
+                return Clutter.EVENT_STOP;
             }
+            return Clutter.EVENT_PROPAGATE;
         });
         buttonsRow.add_child(saveBtn);
 
