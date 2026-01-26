@@ -388,6 +388,31 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._listsBar.visible = true;
 
+        // Add "All" button at the beginning to show all items (clear list filter)
+        this._listsAllButton = new St.Button({
+            style_class: 'clipmaster-list-tag',
+            can_focus: false,
+            track_hover: true
+        });
+        const allLabel = new St.Label({
+            text: _('All'),
+            style_class: 'clipmaster-list-tag-label',
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        this._listsAllButton.set_child(allLabel);
+        this._listsAllButton.set_style('background-color: #6c7086; padding: 2px 8px;');
+        this._listsAllButton.connect('clicked', () => {
+            // Clear list filter, keep current type filter
+            this._currentListId = null;
+            this._loadItems();
+            // Update button states
+            if (this._listButtons) {
+                Object.values(this._listButtons).forEach(b => b.remove_style_class_name('active'));
+            }
+            this._listsAllButton.add_style_class_name('active');
+        });
+        this._listsBar.add_child(this._listsAllButton);
+
         // Add each list as a button with its color as background
         lists.forEach(list => {
             const btn = new St.Button({
@@ -855,6 +880,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 if (b) b.remove_style_class_name('active');
             });
         }
+        if (this._listsAllButton) {
+            this._listsAllButton.remove_style_class_name('active');
+        }
         
         this._textButton.add_style_class_name('active');
 
@@ -910,6 +938,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             Object.values(this._listButtons).forEach(b => {
                 if (b) b.remove_style_class_name('active');
             });
+        }
+        if (this._listsAllButton) {
+            this._listsAllButton.remove_style_class_name('active');
         }
 
         // Clear manage button state (old gear button)
