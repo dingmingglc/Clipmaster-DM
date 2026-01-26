@@ -308,13 +308,11 @@
 }
 
 .clipmaster-item-fav-inactive {
-    color: #cdd6f4;
-    opacity: 0.7;
+    color: #ffffff;
 }
 
 .clipmaster-popup.light .clipmaster-item-fav-inactive {
-    color: #4c4f69;
-    opacity: 0.8;
+    color: #000000;
 }
 
 .clipmaster-fav-button {
