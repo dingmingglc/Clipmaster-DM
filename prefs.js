@@ -168,8 +168,8 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
 
         // Text includes URL and Code
         const textIncludeRow = new Adw.SwitchRow({
-            title: _('Text Includes URL & Code'),
-            subtitle: _('Show URL and Code items in Text filter')
+            title: _('Text Filter Includes URL/Code'),
+            subtitle: _('Show URL and Code items when Text filter is selected')
         });
         settings.bind('text-include-url-code', textIncludeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         popupGroup.add(textIncludeRow);
