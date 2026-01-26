@@ -2720,8 +2720,7 @@
     padding: 2px 3px;
     min-width: 18px;
     min-height: 18px;
-    color: #6c7086;
-    opacity: 0.4;
+    color: #ffffff;
 }
 
 .clipmaster-action-button:hover {
@@ -2731,7 +2730,7 @@
 }
 
 .clipmaster-popup.light .clipmaster-action-button {
-    color: #8c8fa1;
+    color: #000000;
 }
 
 .clipmaster-popup.light .clipmaster-action-button:hover {
@@ -2751,7 +2750,7 @@
 
 .clipmaster-item:hover .clipmaster-action-button,
 .clipmaster-item.selected .clipmaster-action-button {
-    opacity: 0.7;
+    opacity: 1;
 }
 
 .clipmaster-item .clipmaster-action-button:hover {

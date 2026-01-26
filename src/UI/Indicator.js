@@ -1295,7 +1295,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             icon_size: iconSize,
             style_class: item.isFavorite ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive'
         });
-        if (listTextColor) favIcon.set_style(`color: ${listTextColor};`);
+        // Don't apply listTextColor to fav icon - let CSS handle it for better contrast
         favButton.set_child(favIcon);
         favButton._tooltipText = item.isFavorite ? _('Unfavorite') : _('Favorite');
         favButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
@@ -1331,7 +1331,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             track_hover: true
         });
         const deleteIcon = new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: iconSize });
-        if (listTextColor) deleteIcon.set_style(`color: ${listTextColor};`);
+        // Don't apply listTextColor to delete icon - let CSS handle it for better contrast
         deleteButton.set_child(deleteIcon);
         deleteButton._tooltipText = _('Delete');
         deleteButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
