@@ -348,7 +348,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._imageButton.connect('clicked', () => this._setFilter(null, ItemType.IMAGE));
         filterBar.add_child(this._imageButton);
 
-        // All button (at the end)
+        // All button
         this._allButton = new St.Button({
             style_class: 'clipmaster-filter-button',
             label: _('All'),
@@ -356,6 +356,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         this._allButton.connect('clicked', () => this._setFilter(null));
         filterBar.add_child(this._allButton);
+
+        // Lists management button (at the end)
+        this._listsManageButton = new St.Button({
+            style_class: 'clipmaster-filter-button',
+            label: _('Lists'),
+            can_focus: false
+        });
+        this._listsManageButton.connect('clicked', () => this._setFilter(null, null, true));
+        filterBar.add_child(this._listsManageButton);
 
         this._filterBar = filterBar;
         this._filterBarContainer.add_child(filterBar);
@@ -435,6 +444,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
     }
 
     _loadManageListsView() {
+        // Check if we're in "add new list" mode
+        if (this._addingNewList) {
+            this._showAddListForm();
+            return;
+        }
+        
+        // Check if we're in "edit list" mode
+        if (this._editingList) {
+            this._showEditListForm(this._editingList);
+            return;
+        }
+
         // Header row with title and add button
         const headerRow = new St.BoxLayout({
             style_class: 'clipmaster-manage-header',
@@ -451,17 +472,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         const addListBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
-            label: _('+ Add List'),
-            can_focus: false,
-            track_hover: true,
-            reactive: true
+            label: _('+ Add'),
+            can_focus: false
         });
-        addListBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._showCreateListInline();
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        addListBtn.connect('clicked', () => {
+            this._addingNewList = true;
+            this._loadItems();
         });
         headerRow.add_child(addListBtn);
 
@@ -471,7 +487,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         const lists = this._database.getLists();
         if (lists.length === 0) {
             const emptyLabel = new St.Label({
-                text: _('No lists yet. Click "+ Add List" to create one.'),
+                text: _('No lists yet. Click "+ Add" to create one.'),
                 style_class: 'clipmaster-empty',
                 x_expand: true,
                 x_align: Clutter.ActorAlign.CENTER,
@@ -524,18 +540,13 @@ class ClipMasterIndicator extends PanelMenu.Button {
         const editBtn = new St.Button({
             style_class: 'clipmaster-action-button',
             child: new St.Icon({ icon_name: 'document-edit-symbolic', icon_size: 14 }),
-            can_focus: false,
-            track_hover: true,
-            reactive: true
+            can_focus: false
         });
         editBtn._tooltipText = _('Edit');
         editBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        editBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._showEditListInline(list, row);
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        editBtn.connect('clicked', () => {
+            this._editingList = list;
+            this._loadItems();
         });
         row.add_child(editBtn);
 
@@ -543,55 +554,46 @@ class ClipMasterIndicator extends PanelMenu.Button {
         const deleteBtn = new St.Button({
             style_class: 'clipmaster-action-button clipmaster-delete-button',
             child: new St.Icon({ icon_name: 'edit-delete-symbolic', icon_size: 14 }),
-            can_focus: false,
-            track_hover: true,
-            reactive: true
+            can_focus: false
         });
         deleteBtn._tooltipText = _('Delete');
         deleteBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        deleteBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._database.deleteList(list.id);
-                this._buildListsBar();
-                this._loadItems(); // Refresh view
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        deleteBtn.connect('clicked', () => {
+            this._database.deleteList(list.id);
+            this._buildListsBar();
+            this._loadItems();
         });
         row.add_child(deleteBtn);
 
         return row;
     }
-
-    _showCreateListInline() {
-        // Remove existing create form if any
-        if (this._createListForm) {
-            this._createListForm.destroy();
-            this._createListForm = null;
-        }
-
-        this._createListForm = new St.BoxLayout({
+    
+    _showAddListForm() {
+        const formBox = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
-            x_expand: true,
-            reactive: true
+            x_expand: true
         });
 
-        // Name row
-        const nameRow = new St.BoxLayout({ x_expand: true, spacing: 8 });
-        
+        // Title
+        const titleLabel = new St.Label({
+            text: _('Add New List'),
+            style_class: 'clipmaster-lists-title',
+            x_align: Clutter.ActorAlign.START
+        });
+        formBox.add_child(titleLabel);
+
+        // Name entry
         const nameEntry = new St.Entry({
             style_class: 'clipmaster-inline-entry',
             hint_text: _('List name...'),
             x_expand: true,
             can_focus: true
         });
-        nameRow.add_child(nameEntry);
-        this._createListForm.add_child(nameRow);
+        formBox.add_child(nameEntry);
 
         // Color row
         const colorRow = new St.BoxLayout({ x_expand: true, spacing: 4, margin_top: 8 });
-        
         const colorLabel = new St.Label({
             text: _('Color:'),
             y_align: Clutter.ActorAlign.CENTER
@@ -605,79 +607,57 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const colorBtn = new St.Button({
                 style_class: 'clipmaster-color-button',
                 style: `background-color: ${color};`,
-                can_focus: false,
-                reactive: true
+                can_focus: false
             });
             if (color === selectedColor) {
                 colorBtn.add_style_class_name('selected');
             }
-            colorBtn.connect('button-press-event', (actor, event) => {
-                if (event.get_button() === 1) {
-                    colorRow.get_children().forEach(c => {
-                        if (c instanceof St.Button) c.remove_style_class_name('selected');
-                    });
-                    colorBtn.add_style_class_name('selected');
-                    selectedColor = color;
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            colorBtn.connect('clicked', () => {
+                colorRow.get_children().forEach(c => {
+                    if (c instanceof St.Button) c.remove_style_class_name('selected');
+                });
+                colorBtn.add_style_class_name('selected');
+                selectedColor = color;
             });
             colorRow.add_child(colorBtn);
         });
-        this._createListForm.add_child(colorRow);
+        formBox.add_child(colorRow);
 
         // Buttons row
-        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 8 });
+        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 12 });
         const spacer = new St.Widget({ x_expand: true });
         buttonsRow.add_child(spacer);
 
         const cancelBtn = new St.Button({
             style_class: 'clipmaster-filter-button',
             label: _('Cancel'),
-            can_focus: false,
-            reactive: true
+            can_focus: false
         });
-        cancelBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._createListForm.destroy();
-                this._createListForm = null;
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        cancelBtn.connect('clicked', () => {
+            this._addingNewList = false;
+            this._loadItems();
         });
         buttonsRow.add_child(cancelBtn);
 
         const createBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
             label: _('Create'),
-            can_focus: false,
-            reactive: true
+            can_focus: false
         });
         createBtn.set_style('margin-left: 8px;');
-        createBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                const name = nameEntry.get_text().trim();
-                if (name) {
-                    this._database.createList(name, selectedColor);
-                    this._buildListsBar();
-                    this._loadItems(); // Refresh view
-                }
-                return Clutter.EVENT_STOP;
+        createBtn.connect('clicked', () => {
+            const name = nameEntry.get_text().trim();
+            if (name) {
+                this._database.createList(name, selectedColor);
+                this._buildListsBar();
             }
-            return Clutter.EVENT_PROPAGATE;
+            this._addingNewList = false;
+            this._loadItems();
         });
         buttonsRow.add_child(createBtn);
 
-        this._createListForm.add_child(buttonsRow);
-
-        // Insert after header row (header is at index 0)
-        const children = this._itemsBox.get_children();
-        if (children.length > 0) {
-            // Insert below the header (first child)
-            this._itemsBox.insert_child_below(this._createListForm, children[0]);
-        } else {
-            this._itemsBox.add_child(this._createListForm);
-        }
+        formBox.add_child(buttonsRow);
+        this._itemsBox.add_child(formBox);
 
         // Focus on name entry
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
@@ -686,35 +666,32 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
     }
 
-    _showEditListInline(list, afterRow) {
-        // Remove existing edit form if any
-        if (this._editListForm) {
-            this._editListForm.destroy();
-            this._editListForm = null;
-        }
-
-        this._editListForm = new St.BoxLayout({
+    _showEditListForm(list) {
+        const formBox = new St.BoxLayout({
             style_class: 'clipmaster-inline-form',
             vertical: true,
-            x_expand: true,
-            reactive: true
+            x_expand: true
         });
 
-        // Name row
-        const nameRow = new St.BoxLayout({ x_expand: true, spacing: 8 });
-        
+        // Title
+        const titleLabel = new St.Label({
+            text: _('Edit List'),
+            style_class: 'clipmaster-lists-title',
+            x_align: Clutter.ActorAlign.START
+        });
+        formBox.add_child(titleLabel);
+
+        // Name entry
         const nameEntry = new St.Entry({
             style_class: 'clipmaster-inline-entry',
             text: list.name,
             x_expand: true,
             can_focus: true
         });
-        nameRow.add_child(nameEntry);
-        this._editListForm.add_child(nameRow);
+        formBox.add_child(nameEntry);
 
         // Color row
         const colorRow = new St.BoxLayout({ x_expand: true, spacing: 4, margin_top: 8 });
-        
         const colorLabel = new St.Label({
             text: _('Color:'),
             y_align: Clutter.ActorAlign.CENTER
@@ -728,73 +705,57 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const colorBtn = new St.Button({
                 style_class: 'clipmaster-color-button',
                 style: `background-color: ${color};`,
-                can_focus: false,
-                reactive: true
+                can_focus: false
             });
             if (color === selectedColor) {
                 colorBtn.add_style_class_name('selected');
             }
-            colorBtn.connect('button-press-event', (actor, event) => {
-                if (event.get_button() === 1) {
-                    colorRow.get_children().forEach(c => {
-                        if (c instanceof St.Button) c.remove_style_class_name('selected');
-                    });
-                    colorBtn.add_style_class_name('selected');
-                    selectedColor = color;
-                    return Clutter.EVENT_STOP;
-                }
-                return Clutter.EVENT_PROPAGATE;
+            colorBtn.connect('clicked', () => {
+                colorRow.get_children().forEach(c => {
+                    if (c instanceof St.Button) c.remove_style_class_name('selected');
+                });
+                colorBtn.add_style_class_name('selected');
+                selectedColor = color;
             });
             colorRow.add_child(colorBtn);
         });
-        this._editListForm.add_child(colorRow);
+        formBox.add_child(colorRow);
 
         // Buttons row
-        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 8 });
+        const buttonsRow = new St.BoxLayout({ x_expand: true, margin_top: 12 });
         const spacer = new St.Widget({ x_expand: true });
         buttonsRow.add_child(spacer);
 
         const cancelBtn = new St.Button({
             style_class: 'clipmaster-filter-button',
             label: _('Cancel'),
-            can_focus: false,
-            reactive: true
+            can_focus: false
         });
-        cancelBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._editListForm.destroy();
-                this._editListForm = null;
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
+        cancelBtn.connect('clicked', () => {
+            this._editingList = null;
+            this._loadItems();
         });
         buttonsRow.add_child(cancelBtn);
 
         const saveBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
             label: _('Save'),
-            can_focus: false,
-            reactive: true
+            can_focus: false
         });
         saveBtn.set_style('margin-left: 8px;');
-        saveBtn.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                const name = nameEntry.get_text().trim();
-                if (name) {
-                    this._database.updateList(list.id, { name, color: selectedColor });
-                    this._buildListsBar();
-                    this._loadItems(); // Refresh view
-                }
-                return Clutter.EVENT_STOP;
+        saveBtn.connect('clicked', () => {
+            const name = nameEntry.get_text().trim();
+            if (name) {
+                this._database.updateList(list.id, { name, color: selectedColor });
+                this._buildListsBar();
             }
-            return Clutter.EVENT_PROPAGATE;
+            this._editingList = null;
+            this._loadItems();
         });
         buttonsRow.add_child(saveBtn);
 
-        this._editListForm.add_child(buttonsRow);
-
-        // Insert directly below the row being edited
-        this._itemsBox.insert_child_below(this._editListForm, afterRow);
+        formBox.add_child(buttonsRow);
+        this._itemsBox.add_child(formBox);
 
         // Focus on name entry
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
@@ -846,6 +807,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._selectedIndex = 0;
         this._currentListId = null;
         this._currentType = ItemType.TEXT;
+        this._manageMode = false;
+        this._addingNewList = false;
+        this._editingList = null;
         this._plainTextMode = false;
         this._plainTextButton.remove_style_pseudo_class('checked');
 
@@ -857,7 +821,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         // Reset filter buttons
         [this._allButton, this._favButton, this._textButton, this._imageButton,
-         this._urlButton, this._codeButton].forEach(b => {
+         this._urlButton, this._codeButton, this._listsManageButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
         
@@ -912,7 +876,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         // Clear all filter button states
         [this._allButton, this._favButton, this._textButton, this._imageButton, 
-         this._urlButton, this._codeButton].forEach(b => {
+         this._urlButton, this._codeButton, this._listsManageButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
 
@@ -923,15 +887,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
             });
         }
 
-        // Clear manage button state
+        // Clear manage button state (old gear button)
         if (this._manageListsBtn) {
             this._manageListsBtn.remove_style_class_name('active');
         }
 
         if (manageMode) {
             // Manage lists mode
-            if (this._manageListsBtn) {
-                this._manageListsBtn.add_style_class_name('active');
+            if (this._listsManageButton) {
+                this._listsManageButton.add_style_class_name('active');
             }
         } else if (listId === -1) {
             // Favorites
