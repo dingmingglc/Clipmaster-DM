@@ -340,6 +340,13 @@
     margin-top: 2px;
 }
 
+.clipmaster-item-type-label {
+    font-size: 10px;
+    color: #89b4fa;
+    margin-right: 8px;
+    font-weight: bold;
+}
+
 .clipmaster-popup.light .clipmaster-item-time {
     color: #8c8fa1;
 }

@@ -1190,6 +1190,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
             bottomRow.add_child(qrButton);
         }
 
+        // Type label [Text], [Code], etc.
+        const typeLabel = new St.Label({
+            text: `[${this._getTypeLabel(item.type)}]`,
+            style_class: 'clipmaster-item-type-label',
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        if (listTextColor) typeLabel.set_style(`color: ${listTextColor};`);
+        bottomRow.add_child(typeLabel);
+
         // Favorite button
         const favButton = new St.Button({
             style_class: 'clipmaster-action-button',
@@ -1538,6 +1547,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
             [ItemType.CODE]: 'text-x-script-symbolic'
         };
         return icons[type] || 'text-x-generic-symbolic';
+    }
+
+    _getTypeLabel(type) {
+        const labels = {
+            [ItemType.TEXT]: 'Text',
+            [ItemType.HTML]: 'HTML',
+            [ItemType.IMAGE]: 'Image',
+            [ItemType.FILE]: 'File',
+            [ItemType.URL]: 'URL',
+            [ItemType.COLOR]: 'Color',
+            [ItemType.CODE]: 'Code'
+        };
+        return labels[type] || 'Text';
     }
 
     _formatTime(timestamp) {
