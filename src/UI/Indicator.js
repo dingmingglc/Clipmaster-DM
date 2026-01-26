@@ -1105,16 +1105,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
             row.add_child(spacer);
         }
 
-        // Type icon
-        const iconName = this._getTypeIcon(item.type);
-        const icon = new St.Icon({
-            icon_name: iconName,
-            icon_size: 16,
-            style_class: 'clipmaster-item-icon'
-        });
-        if (listTextColor) icon.set_style(`color: ${listTextColor};`);
-        row.add_child(icon);
-
         // Content box
         const contentBox = new St.BoxLayout({
             vertical: true,
