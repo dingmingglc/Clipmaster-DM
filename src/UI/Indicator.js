@@ -913,10 +913,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
     // Do NOT swallow clicks inside the menu (they must reach buttons/entries).
     vfunc_event(event) {
         if (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === 1) {
-            const source = event.get_source?.() ?? null;
+            // Determine real clicked actor via stage picking.
+            // (event.get_source() is not reliable across Shell versions/themes)
+            let clickedActor = null;
+            try {
+                const [stageX, stageY] = event.get_coords();
+                clickedActor = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, stageX, stageY);
+            } catch (e) {
+                clickedActor = null;
+            }
 
             // If the click originates from inside the popup menu, let it propagate.
-            if (this._actorIsInsideMenu(source))
+            if (this._actorIsInsideMenu(clickedActor))
                 return super.vfunc_event(event);
 
             this.menu.toggle();
