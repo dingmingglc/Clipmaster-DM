@@ -595,45 +595,45 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         headerRow.add_child(headerLabel);
 
-        // Spacer for alignment
         const spacerHeader = new St.Widget({ width: 60 });
         headerRow.add_child(spacerHeader);
 
         this._itemsBox.add_child(headerRow);
 
-        // Form container
-        const formBox = new St.BoxLayout({
-            style_class: 'clipmaster-inline-form',
-            vertical: true,
+        // Name row - directly in _itemsBox
+        const nameRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
             x_expand: true
         });
-
-        // Name entry
         const nameLabel = new St.Label({
-            text: _('List Name:'),
-            style_class: 'clipmaster-context-label',
-            x_align: Clutter.ActorAlign.START
+            text: _('Name:'),
+            style_class: 'clipmaster-manage-list-name',
+            y_align: Clutter.ActorAlign.CENTER,
+            width: 60
         });
-        formBox.add_child(nameLabel);
+        nameRow.add_child(nameLabel);
 
         const nameEntry = new St.Entry({
-            style_class: 'clipmaster-inline-entry',
-            hint_text: _('Enter list name...'),
+            style_class: 'clipmaster-context-entry',
+            hint_text: _('List name...'),
             x_expand: true,
             can_focus: true
         });
-        formBox.add_child(nameEntry);
+        nameRow.add_child(nameEntry);
+        this._itemsBox.add_child(nameRow);
 
-        // Color row
+        // Color row - directly in _itemsBox
+        const colorRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
+            x_expand: true
+        });
         const colorLabel = new St.Label({
             text: _('Color:'),
-            style_class: 'clipmaster-context-label',
-            x_align: Clutter.ActorAlign.START,
-            margin_top: 12
+            style_class: 'clipmaster-manage-list-name',
+            y_align: Clutter.ActorAlign.CENTER,
+            width: 60
         });
-        formBox.add_child(colorLabel);
-
-        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 6 });
+        colorRow.add_child(colorLabel);
 
         const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#95a5a6'];
         let selectedColor = colors[0];
@@ -656,15 +656,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
             });
             colorRow.add_child(colorBtn);
         });
-        formBox.add_child(colorRow);
+        this._itemsBox.add_child(colorRow);
 
-        // Create button
+        // Create button row - directly in _itemsBox
+        const btnRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
+            x_expand: true
+        });
         const createBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
             label: _('Create List'),
             can_focus: false,
-            x_expand: true,
-            margin_top: 16
+            x_expand: true
         });
         createBtn.connect('clicked', () => {
             const name = nameEntry.get_text().trim();
@@ -675,9 +678,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 this._loadItems();
             }
         });
-        formBox.add_child(createBtn);
-
-        this._itemsBox.add_child(formBox);
+        btnRow.add_child(createBtn);
+        this._itemsBox.add_child(btnRow);
 
         // Focus on name entry
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
@@ -713,45 +715,45 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         headerRow.add_child(headerLabel);
 
-        // Spacer for alignment
         const spacerHeader = new St.Widget({ width: 60 });
         headerRow.add_child(spacerHeader);
 
         this._itemsBox.add_child(headerRow);
 
-        // Form container
-        const formBox = new St.BoxLayout({
-            style_class: 'clipmaster-inline-form',
-            vertical: true,
+        // Name row - directly in _itemsBox
+        const nameRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
             x_expand: true
         });
-
-        // Name entry
         const nameLabel = new St.Label({
-            text: _('List Name:'),
-            style_class: 'clipmaster-context-label',
-            x_align: Clutter.ActorAlign.START
+            text: _('Name:'),
+            style_class: 'clipmaster-manage-list-name',
+            y_align: Clutter.ActorAlign.CENTER,
+            width: 60
         });
-        formBox.add_child(nameLabel);
+        nameRow.add_child(nameLabel);
 
         const nameEntry = new St.Entry({
-            style_class: 'clipmaster-inline-entry',
+            style_class: 'clipmaster-context-entry',
             text: list.name,
             x_expand: true,
             can_focus: true
         });
-        formBox.add_child(nameEntry);
+        nameRow.add_child(nameEntry);
+        this._itemsBox.add_child(nameRow);
 
-        // Color row
+        // Color row - directly in _itemsBox
+        const colorRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
+            x_expand: true
+        });
         const colorLabel = new St.Label({
             text: _('Color:'),
-            style_class: 'clipmaster-context-label',
-            x_align: Clutter.ActorAlign.START,
-            margin_top: 12
+            style_class: 'clipmaster-manage-list-name',
+            y_align: Clutter.ActorAlign.CENTER,
+            width: 60
         });
-        formBox.add_child(colorLabel);
-
-        const colorRow = new St.BoxLayout({ x_expand: true, spacing: 6 });
+        colorRow.add_child(colorLabel);
 
         const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#95a5a6'];
         let selectedColor = list.color || colors[0];
@@ -774,15 +776,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
             });
             colorRow.add_child(colorBtn);
         });
-        formBox.add_child(colorRow);
+        this._itemsBox.add_child(colorRow);
 
-        // Save button
+        // Save button row - directly in _itemsBox
+        const btnRow = new St.BoxLayout({
+            style_class: 'clipmaster-manage-list-row',
+            x_expand: true
+        });
         const saveBtn = new St.Button({
             style_class: 'clipmaster-filter-button active',
             label: _('Save Changes'),
             can_focus: false,
-            x_expand: true,
-            margin_top: 16
+            x_expand: true
         });
         saveBtn.connect('clicked', () => {
             const name = nameEntry.get_text().trim();
@@ -793,9 +798,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 this._loadItems();
             }
         });
-        formBox.add_child(saveBtn);
-
-        this._itemsBox.add_child(formBox);
+        btnRow.add_child(saveBtn);
+        this._itemsBox.add_child(btnRow);
 
         // Focus on name entry
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
