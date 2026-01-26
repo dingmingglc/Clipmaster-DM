@@ -1002,6 +1002,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         row._index = index;
 
         // Apply list color as background if item belongs to a list
+        let listTextColor = null;
         if (item.listId) {
             const list = this._database.getListById(item.listId);
             if (list && list.color) {
@@ -1015,9 +1016,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     '#9b59b6': '#ffffff', // purple -> white
                     '#95a5a6': '#ffffff'  // gray -> white
                 };
-                const textColor = textColorMap[list.color] || '#ffffff';
-                row.set_style(`background-color: ${list.color}; color: ${textColor};`);
+                listTextColor = textColorMap[list.color] || '#ffffff';
+                row.set_style(`background-color: ${list.color};`);
                 row._listColor = list.color;
+                row._textColor = listTextColor;
             }
         }
 
@@ -1055,6 +1057,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 text: (index + 1).toString(),
                 style_class: 'clipmaster-item-number'
             });
+            if (listTextColor) numLabel.set_style(`color: ${listTextColor};`);
             row.add_child(numLabel);
         } else {
             const spacer = new St.Widget({ width: 24 });
@@ -1068,6 +1071,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             icon_size: 16,
             style_class: 'clipmaster-item-icon'
         });
+        if (listTextColor) icon.set_style(`color: ${listTextColor};`);
         row.add_child(icon);
 
         // Content box
@@ -1085,6 +1089,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 x_expand: true,
                 x_align: Clutter.ActorAlign.START
             });
+            if (listTextColor) titleLabel.set_style(`color: ${listTextColor};`);
             titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
             contentBox.add_child(titleLabel);
         }
@@ -1108,6 +1113,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             x_expand: true,
             x_align: Clutter.ActorAlign.START
         });
+        if (listTextColor) previewLabel.set_style(`color: ${listTextColor};`);
         previewLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         contentBox.add_child(previewLabel);
 
@@ -1123,6 +1129,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 style_class: 'clipmaster-item-time',
                 y_align: Clutter.ActorAlign.CENTER
             });
+            if (listTextColor) timeLabel.set_style(`color: ${listTextColor}; opacity: 0.8;`);
             bottomRow.add_child(timeLabel);
         }
 
