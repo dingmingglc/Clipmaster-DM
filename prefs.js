@@ -40,6 +40,38 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
         });
         window.add(generalPage);
 
+        // Language Group
+        const languageGroup = new Adw.PreferencesGroup({
+            title: _('Language'),
+            description: _('Choose interface language')
+        });
+        generalPage.add(languageGroup);
+
+        // Language selector
+        const languageRow = new Adw.ComboRow({
+            title: _('Interface Language'),
+            subtitle: _('Choose interface language')
+        });
+        const languageModel = new Gtk.StringList();
+        languageModel.append(_('Auto (System)'));
+        languageModel.append('English');
+        languageModel.append('简体中文');
+        languageRow.model = languageModel;
+
+        // Map language setting to combo index
+        const languageMap = ['auto', 'en', 'zh_CN'];
+        const currentLang = settings.get_string('language');
+        const langIndex = languageMap.indexOf(currentLang);
+        languageRow.selected = langIndex >= 0 ? langIndex : 0;
+
+        languageRow.connect('notify::selected', () => {
+            const selected = languageRow.selected;
+            if (selected >= 0 && selected < languageMap.length) {
+                settings.set_string('language', languageMap[selected]);
+            }
+        });
+        languageGroup.add(languageRow);
+
         // History Group
         const historyGroup = new Adw.PreferencesGroup({
             title: _('Clipboard History'),

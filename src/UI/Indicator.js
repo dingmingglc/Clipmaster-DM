@@ -15,12 +15,13 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
-import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { ItemType, debugLog } from '../Util/Constants.js';
 import { SignalManager, TimeoutManager } from '../Util/Utils.js';
 import { QrCodeGenerator, QrEcc } from '../Util/QrCodeGenerator.js';
 import { Keyboard } from '../Util/Keyboard.js';
+import { tr as _, initTranslations } from '../Util/Translations.js';
 
 export const ClipMasterIndicator = GObject.registerClass(
 class ClipMasterIndicator extends PanelMenu.Button {

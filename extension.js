@@ -8,6 +8,7 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import { Gettext } from 'gi://Gettext';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -17,6 +18,7 @@ import { setDebugMode, debugLog } from './src/Util/Constants.js';
 import { ClipboardDatabase } from './src/Manager/Database.js';
 import { ClipboardMonitor } from './src/Manager/ClipboardMonitor.js';
 import { ClipMasterIndicator } from './src/UI/Indicator.js';
+import { initTranslations } from './src/Util/Translations.js';
 
 
 export default class ClipMasterCustomExtension extends Extension {
@@ -24,6 +26,9 @@ export default class ClipMasterCustomExtension extends Extension {
         this._settings = this.getSettings();
         this._extensionPath = this.path;
         this._signalManager = new SignalManager();
+
+        // Initialize translations
+        initTranslations(this._settings);
 
         setDebugMode(this._settings.get_boolean('debug-mode'));
         this._signalManager.connect(
