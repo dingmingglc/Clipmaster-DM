@@ -1802,9 +1802,23 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._database.moveToTop(item.id);
 
         const closeOnPaste = this._settings.get_boolean('close-on-paste');
+        const pasteOnSelect = this._settings.get_boolean('paste-on-select');
 
         if (closeOnPaste && !fromHover && !this._isPinned) {
             this.menu.close();
+            
+            // Auto-paste if enabled (simulate Ctrl+V after a short delay)
+            if (pasteOnSelect) {
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                    try {
+                        // Use xdotool to simulate Ctrl+V (works on X11)
+                        GLib.spawn_command_line_async('xdotool key --clearmodifiers ctrl+v');
+                    } catch (e) {
+                        debugLog(`Auto-paste failed: ${e.message}`);
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
         }
     }
 

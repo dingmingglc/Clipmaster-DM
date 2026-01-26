@@ -352,13 +352,6 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
             appearanceGroup.add(clearThemeRow);
         }
 
-        // Dark theme toggle (for backward compatibility)
-        const darkThemeRow = new Adw.SwitchRow({
-            title: _('Dark Theme'),
-            subtitle: _('Use dark theme (disable for light theme)')
-        });
-        settings.bind('dark-theme', darkThemeRow, 'active', Gio.SettingsBindFlags.DEFAULT);
-        appearanceGroup.add(darkThemeRow);
 
         // Panel Indicator Group
         const indicatorGroup = new Adw.PreferencesGroup({

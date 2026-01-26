@@ -8,6 +8,8 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Meta from 'gi://Meta';
 
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+
 import { SignalManager, TimeoutManager, SettingsCache, HashUtils, ValidationUtils } from '../Util/Utils.js';
 import { ItemType, debugLog } from '../Util/Constants.js';
 import { ImageStorage } from '../Util/ImageStorage.js';
@@ -40,6 +42,9 @@ export class ClipboardMonitor {
 
         this._cachedSettings = {
             trackImages: this._settingsCache.getBoolean('track-images', false),
+            trackFiles: this._settingsCache.getBoolean('track-files', false),
+            stripWhitespace: this._settingsCache.getBoolean('strip-whitespace', false),
+            showNotification: this._settingsCache.getBoolean('show-notification', false),
             maxItemSize: maxItemSize,
             maxImageSize: maxImageSize,
             historySize: this._settingsCache.getInt('history-size', 100)
@@ -57,6 +62,15 @@ export class ClipboardMonitor {
         switch (key) {
             case 'track-images':
                 this._cachedSettings.trackImages = this._settingsCache.getBoolean('track-images', false);
+                break;
+            case 'track-files':
+                this._cachedSettings.trackFiles = this._settingsCache.getBoolean('track-files', false);
+                break;
+            case 'strip-whitespace':
+                this._cachedSettings.stripWhitespace = this._settingsCache.getBoolean('strip-whitespace', false);
+                break;
+            case 'show-notification':
+                this._cachedSettings.showNotification = this._settingsCache.getBoolean('show-notification', false);
                 break;
             case 'max-item-size-mb':
                 this._cachedSettings.maxItemSize = this._settingsCache.getInt('max-item-size-mb', 1) * 1024 * 1024;
@@ -420,6 +434,11 @@ export class ClipboardMonitor {
             return;
         }
 
+        // Strip whitespace if enabled
+        if (this._cachedSettings.stripWhitespace) {
+            text = text.trim();
+        }
+
         if (text.length > this._cachedSettings.maxItemSize) {
             text = text.substring(0, this._cachedSettings.maxItemSize);
         }
@@ -444,6 +463,11 @@ export class ClipboardMonitor {
         } else if (trimmed.startsWith('<') && trimmed.includes('>')) {
             type = ItemType.HTML;
         } else if (trimmed.startsWith('file://')) {
+            // Only track files if trackFiles is enabled
+            if (!this._cachedSettings.trackFiles) {
+                debugLog('File path detected but trackFiles is disabled, skipping');
+                return;
+            }
             type = ItemType.FILE;
         } else if (this._isCodeSnippet(trimmed)) {
             type = ItemType.CODE;
@@ -462,6 +486,31 @@ export class ClipboardMonitor {
 
         if (this._onNewItem && !this._isStopped) {
             this._onNewItem(itemId);
+        }
+
+        // Show notification if enabled
+        if (this._cachedSettings.showNotification && itemId) {
+            this._showNotification(type, trimmed.substring(0, 50));
+        }
+    }
+
+    _showNotification(type, preview) {
+        try {
+            const typeLabels = {
+                [ItemType.TEXT]: 'Text',
+                [ItemType.URL]: 'URL',
+                [ItemType.CODE]: 'Code',
+                [ItemType.HTML]: 'HTML',
+                [ItemType.IMAGE]: 'Image',
+                [ItemType.FILE]: 'File',
+                [ItemType.COLOR]: 'Color'
+            };
+            const typeLabel = typeLabels[type] || 'Text';
+            const body = preview.length > 50 ? preview + '...' : preview;
+            
+            Main.notify('ClipMaster', `${typeLabel}: ${body}`);
+        } catch (e) {
+            debugLog(`Notification error: ${e.message}`);
         }
     }
 
