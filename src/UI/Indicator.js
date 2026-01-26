@@ -669,10 +669,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._createListForm.add_child(buttonsRow);
 
-        // Insert after header
+        // Insert after header (use the same insertion style as QR panel for reliability)
         const children = this._itemsBox.get_children();
-        if (children.length > 0) {
-            this._itemsBox.insert_child_at_index(this._createListForm, 1);
+        const afterHeader = children.length > 1 ? children[1] : null;
+        if (afterHeader) {
+            this._itemsBox.insert_child_above(this._createListForm, afterHeader);
         } else {
             this._itemsBox.add_child(this._createListForm);
         }
@@ -790,11 +791,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._editListForm.add_child(buttonsRow);
 
-        // Insert after the row being edited
+        // Insert after the row being edited (use insert_child_above like QR panel)
         const children = this._itemsBox.get_children();
         const rowIndex = children.indexOf(afterRow);
-        if (rowIndex >= 0 && rowIndex < children.length - 1) {
-            this._itemsBox.insert_child_at_index(this._editListForm, rowIndex + 1);
+        const nextSibling = rowIndex >= 0 ? children[rowIndex + 1] : null;
+        if (nextSibling) {
+            this._itemsBox.insert_child_above(this._editListForm, nextSibling);
         } else {
             this._itemsBox.add_child(this._editListForm);
         }
