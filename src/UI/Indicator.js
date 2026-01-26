@@ -20,6 +20,7 @@ import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/
 import { ItemType, debugLog } from '../Util/Constants.js';
 import { SignalManager, TimeoutManager } from '../Util/Utils.js';
 import { QrCodeGenerator, QrEcc } from '../Util/QrCodeGenerator.js';
+import { Keyboard } from '../Util/Keyboard.js';
 
 export const ClipMasterIndicator = GObject.registerClass(
 class ClipMasterIndicator extends PanelMenu.Button {
@@ -41,6 +42,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         this._signalManager = new SignalManager();
         this._timeoutManager = new TimeoutManager();
+        this._keyboard = new Keyboard();
 
         // Connect to GNOME interface settings for system theme detection
         this._interfaceSettings = new Gio.Settings({ schema: 'org.gnome.desktop.interface' });
@@ -1809,17 +1811,17 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (closeOnPaste && !fromHover && !this._isPinned) {
             this.menu.close();
             
-            // Auto-paste if enabled (simulate Ctrl+V after a short delay)
-            if (pasteOnSelect) {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            // Auto-paste if enabled (simulate Shift+Insert after a short delay)
+            if (pasteOnSelect && this._keyboard) {
+                this._timeoutManager.add(GLib.PRIORITY_DEFAULT, 50, () => {
                     try {
-                        // Use xdotool to simulate Ctrl+V (works on X11)
-                        GLib.spawn_command_line_async('xdotool key --clearmodifiers ctrl+v');
+                        this._keyboard.paste();
+                        debugLog('Auto-paste triggered via virtual keyboard');
                     } catch (e) {
                         debugLog(`Auto-paste failed: ${e.message}`);
                     }
                     return GLib.SOURCE_REMOVE;
-                });
+                }, 'paste-on-select');
             }
         }
     }
@@ -1901,6 +1903,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
         if (this._timeoutManager) {
             this._timeoutManager.removeAll();
+        }
+
+        if (this._keyboard) {
+            this._keyboard.destroy();
+            this._keyboard = null;
             this._timeoutManager = null;
         }
 
