@@ -309,6 +309,38 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         this._header.add_child(this._pinButton);
 
+        // Clear all button (keeps favorites)
+        this._clearAllButton = new St.Button({
+            style_class: 'clipmaster-toggle-button',
+            child: new St.Icon({ icon_name: 'edit-clear-all-symbolic', icon_size: 16 }),
+            can_focus: false,
+            track_hover: true
+        });
+        this._clearAllButton._tooltipText = _('Clear all (keeps favorites)');
+        this._clearAllButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
+        this._clearAllButton.connect('clicked', () => {
+            this._database.clearHistory(true); // true = keep favorites
+            this._loadItems();
+            return Clutter.EVENT_STOP;
+        });
+        this._header.add_child(this._clearAllButton);
+
+        // Settings button
+        this._settingsButton = new St.Button({
+            style_class: 'clipmaster-toggle-button',
+            child: new St.Icon({ icon_name: 'preferences-system-symbolic', icon_size: 16 }),
+            can_focus: false,
+            track_hover: true
+        });
+        this._settingsButton._tooltipText = _('Settings');
+        this._settingsButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
+        this._settingsButton.connect('clicked', () => {
+            this.menu.close();
+            this._extension.openPreferences();
+            return Clutter.EVENT_STOP;
+        });
+        this._header.add_child(this._settingsButton);
+
         // Close button
         this._closeButton = new St.Button({
             style_class: 'clipmaster-close-button',
