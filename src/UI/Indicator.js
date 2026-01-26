@@ -1129,7 +1129,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 style_class: 'clipmaster-item-time',
                 y_align: Clutter.ActorAlign.CENTER
             });
-            if (listTextColor) timeLabel.set_style(`color: ${listTextColor}; opacity: 0.8;`);
+            if (listTextColor) timeLabel.set_style(`color: ${listTextColor};`);
             bottomRow.add_child(timeLabel);
         }
 
