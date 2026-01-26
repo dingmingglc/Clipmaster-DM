@@ -3101,3 +3101,97 @@
 .clipmaster-popup.light .clipmaster-list-row.selected {
     background-color: rgba(30, 102, 245, 0.15);
 }
+
+/* ============================================
+   Manage Lists View Styles
+   ============================================ */
+.clipmaster-manage-header {
+    padding: 8px 4px;
+    margin-bottom: 8px;
+    spacing: 8px;
+    border-bottom: 1px solid rgba(137, 180, 250, 0.2);
+}
+
+.clipmaster-popup.light .clipmaster-manage-header {
+    border-bottom-color: rgba(30, 102, 245, 0.2);
+}
+
+.clipmaster-manage-list-row {
+    padding: 10px 8px;
+    margin: 2px 0;
+    spacing: 10px;
+    border-radius: 6px;
+    background-color: rgba(49, 50, 68, 0.5);
+    transition: background-color 150ms ease;
+}
+
+.clipmaster-manage-list-row:hover {
+    background-color: rgba(69, 71, 90, 0.8);
+}
+
+.clipmaster-popup.light .clipmaster-manage-list-row {
+    background-color: rgba(239, 241, 245, 0.7);
+}
+
+.clipmaster-popup.light .clipmaster-manage-list-row:hover {
+    background-color: rgba(220, 224, 232, 0.9);
+}
+
+.clipmaster-manage-list-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #cdd6f4;
+}
+
+.clipmaster-popup.light .clipmaster-manage-list-name {
+    color: #4c4f69;
+}
+
+.clipmaster-manage-list-count {
+    font-size: 11px;
+    color: #a6adc8;
+    margin-right: 8px;
+}
+
+.clipmaster-popup.light .clipmaster-manage-list-count {
+    color: #6c6f85;
+}
+
+/* Inline Form Styles */
+.clipmaster-inline-form {
+    padding: 12px;
+    margin: 4px 0;
+    background-color: rgba(49, 50, 68, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(137, 180, 250, 0.3);
+}
+
+.clipmaster-popup.light .clipmaster-inline-form {
+    background-color: rgba(239, 241, 245, 0.9);
+    border-color: rgba(30, 102, 245, 0.3);
+}
+
+.clipmaster-inline-entry {
+    background-color: rgba(30, 30, 46, 0.8);
+    border: 1px solid rgba(137, 180, 250, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #cdd6f4;
+    font-size: 13px;
+}
+
+.clipmaster-inline-entry:focus {
+    border-color: #89b4fa;
+    background-color: rgba(30, 30, 46, 0.95);
+}
+
+.clipmaster-popup.light .clipmaster-inline-entry {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(30, 102, 245, 0.3);
+    color: #4c4f69;
+}
+
+.clipmaster-popup.light .clipmaster-inline-entry:focus {
+    border-color: #1e66f5;
+    background-color: white;
+}
