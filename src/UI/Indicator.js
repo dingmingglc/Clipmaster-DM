@@ -34,6 +34,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._monitor = extension._monitor;
 
         this._items = [];
+        this._itemRows = []; // Array to store row references by index
         this._selectedIndex = -1; // No item selected initially
         this._searchQuery = '';
         this._currentListId = null;
@@ -1253,6 +1254,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._closeContextPanel();
         this._closeQrPanel();
         this._itemsBox.destroy_all_children();
+        this._itemRows = []; // Clear row references
 
         // If in manage mode, show list management UI
         if (this._manageMode) {
@@ -1285,9 +1287,14 @@ class ClipMasterIndicator extends PanelMenu.Button {
             return;
         }
 
+        // Clear row references
+        this._itemRows = [];
+        
         this._items.forEach((item, index) => {
             const row = this._createItemRow(item, index);
             this._itemsBox.add_child(row);
+            // Store row reference by index for direct access
+            this._itemRows[index] = row;
         });
 
         // Only update selection if there's an active selection (from keyboard navigation)
@@ -1891,50 +1898,30 @@ class ClipMasterIndicator extends PanelMenu.Button {
     }
 
     _updateSelection() {
-        if (!this._itemsBox || this._selectedIndex < 0) {
-            // Clear all selections if no valid selection
-            const children = this._itemsBox?.get_children() || [];
-            children.forEach((child) => {
-                if (child._index !== undefined) {
-                    child.remove_style_class_name('selected');
+        if (!this._itemsBox) return;
+        
+        // Clear all selections first
+        if (this._itemRows) {
+            this._itemRows.forEach((row) => {
+                if (row) {
+                    row.remove_style_class_name('selected');
                 }
             });
-            return;
         }
-
-        const children = this._itemsBox.get_children();
-        let found = false;
         
-        // First, remove selected from all children
-        children.forEach((child) => {
-            if (child._index !== undefined) {
-                child.remove_style_class_name('selected');
-            }
-        });
-        
-        // Then, find and select the matching child by _index
-        // Use find() to get the exact match
-        const selectedChild = children.find((child) => {
-            return child._index !== undefined && child._index === this._selectedIndex;
-        });
-        
-        if (selectedChild) {
-            selectedChild.add_style_class_name('selected');
-            found = true;
-        } else {
-            // Debug: log if selection not found
-            debugLog(`_updateSelection: selectedIndex ${this._selectedIndex} not found in children`);
-            const indices = children.filter(c => c._index !== undefined).map(c => c._index).sort((a, b) => a - b);
-            debugLog(`Available indices: ${indices.join(', ')}`);
-            debugLog(`Items length: ${this._items.length}`);
-            debugLog(`Children count: ${children.length}, with _index: ${children.filter(c => c._index !== undefined).length}`);
+        // Then, select the item at _selectedIndex if valid
+        if (this._selectedIndex >= 0 && this._itemRows && this._itemRows[this._selectedIndex]) {
+            this._itemRows[this._selectedIndex].add_style_class_name('selected');
         }
     }
 
     _scrollToSelected() {
-        const children = this._itemsBox.get_children();
-        const selected = children.find(c => c._index === this._selectedIndex);
-        if (selected) {
+        if (this._selectedIndex < 0 || !this._itemRows || !this._itemRows[this._selectedIndex]) {
+            return;
+        }
+        
+        const selected = this._itemRows[this._selectedIndex];
+        if (selected && this._scrollView) {
             const adj = this._scrollView.vscroll.adjustment;
             const [, y] = selected.get_transformed_position();
             const [, boxY] = this._scrollView.get_transformed_position();
