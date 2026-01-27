@@ -1325,9 +1325,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // Connect key-focus-in event to auto-scroll when item gets focus
         // This is the Clipboard Indicator way: when focus moves to an item, scroll to make it visible
         row.connect('key-focus-in', () => {
-            if (this._scrollView && row) {
+            debugLog(`key-focus-in triggered for row index ${row._index}`);
+            if (this._scrollView && row && !row.is_destroyed()) {
                 try {
                     AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, row);
+                    debugLog(`key-focus-in: scrolled to row index ${row._index}`);
                 } catch (e) {
                     debugLog(`key-focus-in scroll error: ${e.message}`);
                 }
@@ -1936,7 +1938,29 @@ class ClipMasterIndicator extends PanelMenu.Button {
             
             // Transfer focus to the selected row (Clipboard Indicator way)
             // This will trigger key-focus-in event, which will auto-scroll
-            selectedRow.grab_key_focus();
+            // Use a small delay to ensure layout is complete
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                try {
+                    if (selectedRow && !selectedRow.is_destroyed()) {
+                        // Check if focus is already on this row
+                        const stage = global.stage;
+                        const currentFocus = stage.get_key_focus();
+                        if (currentFocus !== selectedRow) {
+                            selectedRow.grab_key_focus();
+                            debugLog(`_updateSelection: transferred focus to row ${this._selectedIndex}`);
+                        } else {
+                            debugLog(`_updateSelection: focus already on row ${this._selectedIndex}, triggering scroll manually`);
+                            // If focus is already on this row, manually trigger scroll
+                            if (this._scrollView) {
+                                AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    debugLog(`_updateSelection: grab_key_focus error: ${e.message}`);
+                }
+                return GLib.SOURCE_REMOVE;
+            });
             
             debugLog(`_updateSelection: selectedIndex=${this._selectedIndex}, row._index=${selectedRow._index}`);
         } else if (this._selectedIndex >= 0) {
