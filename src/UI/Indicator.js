@@ -99,9 +99,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
         menuItem.add_child(this._contentBox);
         this.menu.addMenuItem(menuItem);
         
-        // Clear hover state when mouse leaves the entire menu (not just content area)
+        // Clear hover and selected state when mouse leaves the entire menu (not just content area)
         this.menu.actor.connect('leave-event', () => {
             this._clearAllHoverStates();
+            this._clearSelection();
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -1101,6 +1102,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
     }
 
+    _clearSelection() {
+        // Clear selected state when mouse leaves menu
+        this._selectedIndex = -1;
+        this._updateSelection();
+    }
+
     _onMenuClosed() {
         debugLog('Menu closed');
         this._closeContextPanel();
@@ -1110,8 +1117,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._tooltip.visible = false;
         }
         
-        // Clear hover state from all items when menu closes
+        // Clear hover and selected state from all items when menu closes
         this._clearAllHoverStates();
+        this._clearSelection();
     }
 
     // Only handle clicks when menu is closed (to open it).
