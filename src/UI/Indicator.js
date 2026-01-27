@@ -14,6 +14,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
+import * as AnimationUtils from 'resource:///org/gnome/shell/misc/animationUtils.js';
 
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -459,13 +460,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         this._selectedIndex = this._items.length - 1;
                     }
                     this._updateSelection();
-                    this._scrollToSelected();
-                    // Transfer focus to content box to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by content box's key handler
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this._contentBox.grab_key_focus();
-                        return GLib.SOURCE_REMOVE;
-                    });
+                    // Scrolling is now handled automatically by key-focus-in event
+                    // Focus is transferred to the selected row in _updateSelection()
                     return Clutter.EVENT_STOP;
                 } else if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
                     if (this._items.length === 0) return Clutter.EVENT_STOP;
@@ -479,13 +475,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     debugLog(`_searchEntry Down: oldIndex=${oldIndex}, newIndex=${this._selectedIndex}, items.length=${this._items.length}, itemRows.length=${this._itemRows?.length || 0}`);
                     this._updateSelection();
-                    this._scrollToSelected();
-                    // Transfer focus to content box to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by content box's key handler
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this._contentBox.grab_key_focus();
-                        return GLib.SOURCE_REMOVE;
-                    });
+                    // Scrolling is now handled automatically by key-focus-in event
+                    // Focus is transferred to the selected row in _updateSelection()
                     return Clutter.EVENT_STOP;
                 }
             }
@@ -1331,6 +1322,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
         row._item = item;
         row._index = index;
 
+        // Connect key-focus-in event to auto-scroll when item gets focus
+        // This is the Clipboard Indicator way: when focus moves to an item, scroll to make it visible
+        row.connect('key-focus-in', () => {
+            if (this._scrollView && row) {
+                try {
+                    AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, row);
+                } catch (e) {
+                    debugLog(`key-focus-in scroll error: ${e.message}`);
+                }
+            }
+        });
+
         // Apply list color as background if item belongs to a list
         let listTextColor = null;
         if (item.listId) {
@@ -1928,8 +1931,14 @@ class ClipMasterIndicator extends PanelMenu.Button {
         
         // Then, select the item at _selectedIndex if valid
         if (this._selectedIndex >= 0 && this._itemRows && this._itemRows[this._selectedIndex]) {
-            this._itemRows[this._selectedIndex].add_style_class_name('selected');
-            debugLog(`_updateSelection: selectedIndex=${this._selectedIndex}, row._index=${this._itemRows[this._selectedIndex]._index}`);
+            const selectedRow = this._itemRows[this._selectedIndex];
+            selectedRow.add_style_class_name('selected');
+            
+            // Transfer focus to the selected row (Clipboard Indicator way)
+            // This will trigger key-focus-in event, which will auto-scroll
+            selectedRow.grab_key_focus();
+            
+            debugLog(`_updateSelection: selectedIndex=${this._selectedIndex}, row._index=${selectedRow._index}`);
         } else if (this._selectedIndex >= 0) {
             debugLog(`_updateSelection: selectedIndex=${this._selectedIndex} but row not found, itemRows.length=${this._itemRows?.length || 0}`);
         }
@@ -2044,17 +2053,22 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _onKeyPress(actor, event) {
         const symbol = event.get_key_symbol();
         
-        // Check if search entry has focus or if event is from search entry
-        // If so, let it handle the event, don't process here
-        const stage = global.stage;
-        const keyFocus = stage.get_key_focus();
-        if (keyFocus === this._searchEntry || 
-            keyFocus === this._searchEntry.clutter_text ||
-            actor === this._searchEntry ||
-            (this._searchEntry.clutter_text && actor === this._searchEntry.clutter_text)) {
-            // Let search entry handle it, don't process here
-            debugLog(`_onKeyPress: Ignoring event from search entry, keyFocus=${keyFocus}, actor=${actor}`);
-            return Clutter.EVENT_PROPAGATE;
+        // For arrow keys, always process them here (navigation mode)
+        // This ensures navigation works even if focus hasn't fully transferred from search entry
+        const isArrowKey = symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up ||
+                          symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down;
+        
+        // For non-arrow keys, check if search entry has focus
+        if (!isArrowKey) {
+            const stage = global.stage;
+            const keyFocus = stage.get_key_focus();
+            if (keyFocus === this._searchEntry || 
+                keyFocus === this._searchEntry.clutter_text ||
+                actor === this._searchEntry ||
+                (this._searchEntry.clutter_text && actor === this._searchEntry.clutter_text)) {
+                // Let search entry handle non-arrow keys
+                return Clutter.EVENT_PROPAGATE;
+            }
         }
 
         if (symbol === Clutter.KEY_Escape) {
@@ -2077,7 +2091,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 this._selectedIndex = this._items.length - 1;
             }
             this._updateSelection();
-            this._scrollToSelected();
+            // Scrolling is now handled automatically by key-focus-in event
             return Clutter.EVENT_STOP;
         }
 
@@ -2096,7 +2110,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             }
             debugLog(`_onKeyPress Down: oldIndex=${oldIndex}, newIndex=${this._selectedIndex}, items.length=${this._items.length}, itemRows.length=${this._itemRows?.length || 0}`);
             this._updateSelection();
-            this._scrollToSelected();
+            // Scrolling is now handled automatically by key-focus-in event
             return Clutter.EVENT_STOP;
         }
 
