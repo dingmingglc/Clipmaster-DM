@@ -1982,21 +1982,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     
                     if (adj) {
-                        // 使用 get_transformed_position() 获取 actor 在 scrollView 中的实际位置
+                        // 直接使用累积高度计算位置（更可靠的方法）
                         let itemY = 0;
-                        try {
-                            const [x, y] = selectedRow.get_transformed_position();
-                            const [scrollX, scrollY] = this._scrollView.get_transformed_position();
-                            // 计算相对于 scrollView 的位置
-                            itemY = y - scrollY;
-                            debugLog(`_updateSelection: item transformed position: x=${x}, y=${y}, scrollView y=${scrollY}, relative itemY=${itemY}`);
-                        } catch (e) {
-                            debugLog(`_updateSelection: error getting transformed position, using cumulative height: ${e.message}`);
-                            // 如果 get_transformed_position 失败，使用累积高度
-                            for (let i = 0; i < this._selectedIndex; i++) {
-                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
-                                    itemY += this._itemRows[i].height;
-                                }
+                        for (let i = 0; i < this._selectedIndex; i++) {
+                            if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                                itemY += this._itemRows[i].height;
                             }
                         }
                         
@@ -2007,26 +1997,28 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         const visibleTop = currentScroll;
                         const visibleBottom = currentScroll + scrollViewHeight;
                         
-                        debugLog(`_updateSelection: calc - itemY=${itemY}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.value=${adj.value}, adj.upper=${adj.upper}, adj.page_size=${adj.page_size}`);
+                        debugLog(`_updateSelection: calc - itemY=${itemY}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.value=${adj.value}, adj.upper=${adj.upper}, adj.page_size=${adj.page_size}, adj.lower=${adj.lower}`);
                         
                         // 处理向上和向下滚动
                         if (itemY < visibleTop || itemBottom > visibleBottom) {
                             let newScroll = currentScroll;
                             if (itemY < visibleTop) {
                                 // 向上滚动：项目在可见区域上方
-                                newScroll = Math.max(0, itemY);
+                                newScroll = Math.max(adj.lower || 0, itemY);
                             } else if (itemBottom > visibleBottom) {
                                 // 向下滚动：项目在可见区域下方
-                                newScroll = Math.max(0, itemBottom - scrollViewHeight);
+                                newScroll = Math.max(adj.lower || 0, itemBottom - scrollViewHeight);
                             }
                             
                             // 确保 newScroll 在有效范围内
-                            const maxScroll = Math.max(0, adj.upper - adj.page_size);
+                            const maxScroll = Math.max(adj.lower || 0, adj.upper - adj.page_size);
                             newScroll = Math.min(newScroll, maxScroll);
-                            newScroll = Math.max(0, newScroll);
+                            newScroll = Math.max(adj.lower || 0, newScroll);
                             
                             debugLog(`_updateSelection: setting adj.value from ${adj.value} to ${newScroll}`);
                             adj.set_value(newScroll);
+                            // 触发 changed 事件以确保 UI 更新
+                            adj.emit('changed');
                             debugLog(`_updateSelection: adj.value after set_value: ${adj.value}`);
                         } else {
                             debugLog(`_updateSelection: item already visible, no scroll needed`);
