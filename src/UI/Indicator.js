@@ -1028,7 +1028,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 const menuWidth = this.menu.actor.width || 450;
                 const menuHeight = this.menu.actor.height || 550;
                 const x = monitor.x + monitor.width - menuWidth - 20;
-                const y = monitor.y + 60; // Leave space for top panel
+                const y = monitor.y + 40; // Leave space for top panel
                 
                 this.menu.actor.set_position(x, y);
                 debugLog(`Menu repositioned to: ${x}, ${y}`);
