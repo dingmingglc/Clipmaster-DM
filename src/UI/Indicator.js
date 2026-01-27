@@ -1941,18 +1941,56 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
         
         const selected = this._itemRows[this._selectedIndex];
-        if (selected && this._scrollView) {
-            const adj = this._scrollView.vscroll.adjustment;
-            const [, y] = selected.get_transformed_position();
-            const [, boxY] = this._scrollView.get_transformed_position();
-            const relY = y - boxY;
-            
-            if (relY < 0) {
-                adj.value += relY;
-            } else if (relY + selected.height > this._scrollView.height) {
-                adj.value += relY + selected.height - this._scrollView.height;
-            }
+        if (!selected || !this._scrollView) {
+            return;
         }
+        
+        const adj = this._scrollView.vscroll.adjustment;
+        if (!adj) {
+            return;
+        }
+        
+        // Use a timeout to ensure layout is complete before calculating positions
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+            if (!selected || !this._scrollView || !this._itemRows) {
+                return GLib.SOURCE_REMOVE;
+            }
+            
+            // Calculate cumulative Y position by summing heights of all items before selected
+            let itemTop = 0;
+            for (let i = 0; i < this._selectedIndex; i++) {
+                if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                    itemTop += this._itemRows[i].height;
+                }
+            }
+            
+            const itemHeight = selected.height;
+            const itemBottom = itemTop + itemHeight;
+            const scrollViewHeight = this._scrollView.height;
+            const currentScroll = adj.value;
+            const visibleTop = currentScroll;
+            const visibleBottom = currentScroll + scrollViewHeight;
+            
+            // Check if item is above visible area
+            if (itemTop < visibleTop) {
+                // Scroll up to show the item at the top
+                adj.value = Math.max(0, itemTop);
+            }
+            // Check if item is below visible area
+            else if (itemBottom > visibleBottom) {
+                // Scroll down to show the item at the bottom
+                const newScroll = itemBottom - scrollViewHeight;
+                adj.value = Math.max(0, newScroll);
+            }
+            
+            // Ensure we don't scroll beyond the content
+            const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
+            if (adj.value > maxScroll) {
+                adj.value = maxScroll;
+            }
+            
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _pasteItem(item, fromHover = false) {
