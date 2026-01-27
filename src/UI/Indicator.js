@@ -1891,28 +1891,43 @@ class ClipMasterIndicator extends PanelMenu.Button {
     }
 
     _updateSelection() {
-        if (!this._itemsBox) return;
+        if (!this._itemsBox || this._selectedIndex < 0) {
+            // Clear all selections if no valid selection
+            const children = this._itemsBox?.get_children() || [];
+            children.forEach((child) => {
+                if (child._index !== undefined) {
+                    child.remove_style_class_name('selected');
+                }
+            });
+            return;
+        }
 
         const children = this._itemsBox.get_children();
         let found = false;
         
+        // First, remove selected from all children
         children.forEach((child) => {
-            // Only process items that have _index property (actual history rows)
             if (child._index !== undefined) {
-                if (child._index === this._selectedIndex) {
-                    child.add_style_class_name('selected');
-                    found = true;
-                } else {
-                    child.remove_style_class_name('selected');
-                }
+                child.remove_style_class_name('selected');
             }
         });
         
-        // Debug: log if selection not found
-        if (this._selectedIndex >= 0 && !found) {
+        // Then, find and select the matching child by _index
+        // Use find() to get the exact match
+        const selectedChild = children.find((child) => {
+            return child._index !== undefined && child._index === this._selectedIndex;
+        });
+        
+        if (selectedChild) {
+            selectedChild.add_style_class_name('selected');
+            found = true;
+        } else {
+            // Debug: log if selection not found
             debugLog(`_updateSelection: selectedIndex ${this._selectedIndex} not found in children`);
-            const indices = children.filter(c => c._index !== undefined).map(c => c._index);
+            const indices = children.filter(c => c._index !== undefined).map(c => c._index).sort((a, b) => a - b);
             debugLog(`Available indices: ${indices.join(', ')}`);
+            debugLog(`Items length: ${this._items.length}`);
+            debugLog(`Children count: ${children.length}, with _index: ${children.filter(c => c._index !== undefined).length}`);
         }
     }
 
