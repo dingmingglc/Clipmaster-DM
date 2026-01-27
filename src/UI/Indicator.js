@@ -74,9 +74,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // Create tooltip label
         this._tooltip = new St.Label({
             style_class: 'clipmaster-tooltip',
-            visible: false
+            visible: false,
+            opacity: 0
         });
         Main.uiGroup.add_child(this._tooltip);
+        // Raise tooltip above other UI elements
+        Main.uiGroup.set_child_above_sibling(this._tooltip, null);
 
         debugLog('ClipMaster Custom Indicator initialized');
     }
@@ -367,29 +370,46 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _onButtonHover(button) {
         if (button.hover && button._tooltipText) {
             this._tooltip.set_text(button._tooltipText);
-            this._tooltip.visible = true;
-
-            const [x, y] = button.get_transformed_position();
-            const [w, h] = button.get_size();
             
-            // Calculate tooltip position - show below the button
-            let tooltipX = Math.round(x + w / 2 - this._tooltip.width / 2);
-            let tooltipY = Math.round(y + h + 5);
-            
-            // Make sure tooltip stays on screen
-            const monitor = Main.layoutManager.primaryMonitor;
-            if (tooltipX < 5) tooltipX = 5;
-            if (tooltipX + this._tooltip.width > monitor.width - 5) {
-                tooltipX = monitor.width - this._tooltip.width - 5;
-            }
-            if (tooltipY + this._tooltip.height > monitor.height - 5) {
-                // Show above the button if below would be off screen
-                tooltipY = Math.round(y - this._tooltip.height - 5);
-            }
-            
-            this._tooltip.set_position(tooltipX, tooltipY);
+            // Use timeout to ensure tooltip size is calculated after text is set
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                if (!button.hover || !this._tooltip) return GLib.SOURCE_REMOVE;
+                
+                const [x, y] = button.get_transformed_position();
+                const [w, h] = button.get_size();
+                
+                // Calculate tooltip position - show below the button
+                let tooltipX = Math.round(x + w / 2 - this._tooltip.width / 2);
+                let tooltipY = Math.round(y + h + 8);
+                
+                // Make sure tooltip stays on screen
+                const monitor = Main.layoutManager.primaryMonitor;
+                if (monitor) {
+                    if (tooltipX < 5) tooltipX = 5;
+                    if (tooltipX + this._tooltip.width > monitor.width - 5) {
+                        tooltipX = monitor.width - this._tooltip.width - 5;
+                    }
+                    if (tooltipY + this._tooltip.height > monitor.height - 5) {
+                        // Show above the button if below would be off screen
+                        tooltipY = Math.round(y - this._tooltip.height - 8);
+                    }
+                }
+                
+                this._tooltip.set_position(tooltipX, tooltipY);
+                this._tooltip.show();
+                this._tooltip.ease({
+                    opacity: 255,
+                    duration: 150,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD
+                });
+                
+                return GLib.SOURCE_REMOVE;
+            });
         } else {
-            this._tooltip.visible = false;
+            if (this._tooltip) {
+                this._tooltip.hide();
+                this._tooltip.opacity = 0;
+            }
         }
     }
 
