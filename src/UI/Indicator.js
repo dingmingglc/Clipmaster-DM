@@ -436,6 +436,43 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._searchEntry.clutter_text.connect('activate', () => {
             this._pasteSelected();
         });
+        
+        // Handle arrow keys in search entry - if empty, navigate items instead
+        this._searchEntry.connect('key-press-event', (actor, event) => {
+            const symbol = event.get_key_symbol();
+            const text = this._searchEntry.get_text();
+            
+            // If search is empty and arrow keys are pressed, navigate items
+            if (text.length === 0) {
+                if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up) {
+                    if (this._items.length === 0) return Clutter.EVENT_STOP;
+                    if (this._selectedIndex < 0) {
+                        this._selectedIndex = this._items.length - 1;
+                    } else if (this._selectedIndex > 0) {
+                        this._selectedIndex--;
+                    } else {
+                        this._selectedIndex = this._items.length - 1;
+                    }
+                    this._updateSelection();
+                    this._scrollToSelected();
+                    return Clutter.EVENT_STOP;
+                } else if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
+                    if (this._items.length === 0) return Clutter.EVENT_STOP;
+                    if (this._selectedIndex < 0) {
+                        this._selectedIndex = 0;
+                    } else if (this._selectedIndex < this._items.length - 1) {
+                        this._selectedIndex++;
+                    } else {
+                        this._selectedIndex = 0;
+                    }
+                    this._updateSelection();
+                    this._scrollToSelected();
+                    return Clutter.EVENT_STOP;
+                }
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+        
         this._contentBox.add_child(this._searchEntry);
     }
 
