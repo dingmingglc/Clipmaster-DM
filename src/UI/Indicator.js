@@ -1894,15 +1894,26 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (!this._itemsBox) return;
 
         const children = this._itemsBox.get_children();
-        children.forEach((child, index) => {
+        let found = false;
+        
+        children.forEach((child) => {
+            // Only process items that have _index property (actual history rows)
             if (child._index !== undefined) {
                 if (child._index === this._selectedIndex) {
                     child.add_style_class_name('selected');
+                    found = true;
                 } else {
                     child.remove_style_class_name('selected');
                 }
             }
         });
+        
+        // Debug: log if selection not found
+        if (this._selectedIndex >= 0 && !found) {
+            debugLog(`_updateSelection: selectedIndex ${this._selectedIndex} not found in children`);
+            const indices = children.filter(c => c._index !== undefined).map(c => c._index);
+            debugLog(`Available indices: ${indices.join(', ')}`);
+        }
     }
 
     _scrollToSelected() {
