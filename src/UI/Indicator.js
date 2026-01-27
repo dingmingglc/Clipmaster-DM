@@ -1988,25 +1988,37 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 }
                 
                 if (needsScroll) {
-                    // Ensure adjustment bounds are correct
-                    const itemsBoxHeight = this._itemsBox.height;
-                    if (itemsBoxHeight > 0) {
-                        // Update upper bound if needed
-                        if (adj.upper < itemsBoxHeight) {
-                            adj.set_upper(itemsBoxHeight);
-                        }
-                    }
-                    
-                    // Clamp the scroll value
-                    const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
-                    newScrollValue = Math.min(newScrollValue, maxScroll);
-                    newScrollValue = Math.max(0, newScrollValue);
-                    
-                    // Set the scroll value using set_value if available
-                    if (typeof adj.set_value === 'function') {
-                        adj.set_value(newScrollValue);
+                    // Try using ensure_visible if available
+                    if (typeof selected.ensure_visible === 'function') {
+                        selected.ensure_visible();
                     } else {
-                        adj.value = newScrollValue;
+                        // Ensure adjustment bounds are correct
+                        const itemsBoxHeight = this._itemsBox.height;
+                        if (itemsBoxHeight > 0) {
+                            // Update upper bound if needed
+                            if (typeof adj.set_upper === 'function') {
+                                if (adj.upper < itemsBoxHeight) {
+                                    adj.set_upper(itemsBoxHeight);
+                                }
+                            } else if (adj.upper < itemsBoxHeight) {
+                                adj.upper = itemsBoxHeight;
+                            }
+                        }
+                        
+                        // Clamp the scroll value
+                        const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
+                        newScrollValue = Math.min(newScrollValue, maxScroll);
+                        newScrollValue = Math.max(0, newScrollValue);
+                        
+                        // Set the scroll value using set_value if available
+                        if (typeof adj.set_value === 'function') {
+                            adj.set_value(newScrollValue);
+                        } else {
+                            adj.value = newScrollValue;
+                        }
+                        
+                        // Force update
+                        this._scrollView.vscroll.adjustment_changed();
                     }
                 }
             } catch (e) {
