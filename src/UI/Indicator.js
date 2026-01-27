@@ -344,23 +344,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         this._header.add_child(this._settingsButton);
 
-        // Close button
-        this._closeButton = new St.Button({
-            style_class: 'clipmaster-close-button',
-            child: new St.Icon({ icon_name: 'window-close-symbolic', icon_size: 16 }),
-            can_focus: false,
-            track_hover: true
-        });
-        this._closeButton._tooltipText = _('Close');
-        this._closeButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        this._closeButton.connect('clicked', () => {
-            this._isPinned = false;
-            this._pinButton.remove_style_pseudo_class('checked');
-            this.menu.close();
-            return Clutter.EVENT_STOP;
-        });
-        this._header.add_child(this._closeButton);
-
         this._contentBox.add_child(this._header);
     }
 
@@ -996,9 +979,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._currentListId = null;
         this._currentType = ItemType.TEXT;
         this._manageMode = false;
-        this._plainTextMode = false;
-        this._plainTextButton.remove_style_pseudo_class('checked');
-
+        // Keep plainTextMode state across menu open/close
+        
         this._isPinned = false;
         this._pinButton.remove_style_pseudo_class('checked');
 
