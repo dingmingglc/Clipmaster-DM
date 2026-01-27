@@ -87,7 +87,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
             style_class: 'clipmaster-popup',
             vertical: true,
             x_expand: true,
-            y_expand: true
+            y_expand: true,
+            can_focus: true
         });
 
         // Add content box to menu
@@ -98,6 +99,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         menuItem.add_child(this._contentBox);
         this.menu.addMenuItem(menuItem);
+        
+        // Connect keyboard events to content box as well
+        this._contentBox.connect('key-press-event', this._onKeyPress.bind(this));
         
         // Clear hover state when mouse leaves the entire menu (not just content area)
         this.menu.actor.connect('leave-event', () => {
@@ -455,10 +459,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     this._updateSelection();
                     this._scrollToSelected();
-                    // Transfer focus to menu container to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by menu's key handler
+                    // Transfer focus to content box to enter navigation mode
+                    // This allows subsequent arrow keys to be handled by content box's key handler
                     GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this.menu.actor.grab_key_focus();
+                        this._contentBox.grab_key_focus();
                         return GLib.SOURCE_REMOVE;
                     });
                     return Clutter.EVENT_STOP;
@@ -473,10 +477,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     this._updateSelection();
                     this._scrollToSelected();
-                    // Transfer focus to menu container to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by menu's key handler
+                    // Transfer focus to content box to enter navigation mode
+                    // This allows subsequent arrow keys to be handled by content box's key handler
                     GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this.menu.actor.grab_key_focus();
+                        this._contentBox.grab_key_focus();
                         return GLib.SOURCE_REMOVE;
                     });
                     return Clutter.EVENT_STOP;
