@@ -117,8 +117,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._buildItemsList();
         this._buildFooter();
 
-        // Connect key events
-        this.menu.actor.connect('key-press-event', this._onKeyPress.bind(this));
+        // Note: Key events are handled by _contentBox.connect('key-press-event') in _buildSearchBar()
+        // We don't need to connect to menu.actor to avoid duplicate event handling
 
         // Apply theme
         this._applyTheme();
