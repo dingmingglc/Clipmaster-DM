@@ -1941,15 +1941,59 @@ class ClipMasterIndicator extends PanelMenu.Button {
             // Transfer focus to the selected row (Clipboard Indicator way)
             // This will trigger key-focus-in event, which will auto-scroll
             // Also directly call ensureActorVisibleInScrollView as a fallback
-            // Use a small delay to ensure layout is complete
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+            // Use multiple delays to ensure layout is complete and scrolling works
+            const scrollToRow = () => {
                 try {
-                    if (selectedRow && !selectedRow.is_destroyed() && this._scrollView) {
-                        // Always try to scroll first (this is the main goal)
+                    if (!selectedRow || selectedRow.is_destroyed() || !this._scrollView) {
+                        return;
+                    }
+                    
+                    debugLog(`_updateSelection: scrolling to row ${this._selectedIndex}`);
+                    
+                    // Try AnimationUtils method first (Clipboard Indicator way)
+                    if (AnimationUtils && typeof AnimationUtils.ensureActorVisibleInScrollView === 'function') {
                         AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
-                        debugLog(`_updateSelection: scrolled to row ${this._selectedIndex}`);
+                        debugLog(`_updateSelection: called AnimationUtils.ensureActorVisibleInScrollView`);
+                    } else {
+                        debugLog(`_updateSelection: AnimationUtils.ensureActorVisibleInScrollView not available`);
                         
-                        // Then try to transfer focus (this will trigger key-focus-in as a bonus)
+                        // Fallback: use adjustment directly
+                        const adj = this._scrollView.vscroll?.adjustment;
+                        if (adj) {
+                            // Calculate position
+                            let itemTop = 0;
+                            for (let i = 0; i < this._selectedIndex; i++) {
+                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                                    itemTop += this._itemRows[i].height;
+                                }
+                            }
+                            const itemHeight = selectedRow.height;
+                            const itemBottom = itemTop + itemHeight;
+                            const scrollViewHeight = this._scrollView.height;
+                            const currentScroll = adj.value;
+                            
+                            if (itemBottom > currentScroll + scrollViewHeight) {
+                                const newScroll = itemBottom - scrollViewHeight;
+                                adj.value = Math.max(0, newScroll);
+                                debugLog(`_updateSelection: used fallback scroll, set adj.value to ${adj.value}`);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    debugLog(`_updateSelection: scroll error: ${e.message}`);
+                }
+            };
+            
+            // Call immediately
+            scrollToRow();
+            
+            // Also call after a delay to ensure layout is complete
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+                scrollToRow();
+                
+                // Try to transfer focus (this will trigger key-focus-in as a bonus)
+                try {
+                    if (selectedRow && !selectedRow.is_destroyed()) {
                         const stage = global.stage;
                         const currentFocus = stage.get_key_focus();
                         if (currentFocus !== selectedRow) {
@@ -1958,8 +2002,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         }
                     }
                 } catch (e) {
-                    debugLog(`_updateSelection: error: ${e.message}`);
+                    debugLog(`_updateSelection: focus error: ${e.message}`);
                 }
+                
+                return GLib.SOURCE_REMOVE;
+            });
+            
+            // Call again after a longer delay as a fallback
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+                scrollToRow();
                 return GLib.SOURCE_REMOVE;
             });
             
