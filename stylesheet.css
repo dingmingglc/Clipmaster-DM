@@ -189,16 +189,16 @@
 
 /* Items Container */
 .clipmaster-items {
-    padding: 4px 0;
-    spacing: 1px;
+    padding: 2px 0;
+    spacing: 0;
 }
 
 /* Individual Item Row */
 .clipmaster-item {
-    padding: 6px 12px;
-    margin: 0 6px;
-    border-radius: 8px;
-    spacing: 8px;
+    padding: 4px 10px;
+    margin: 0 4px;
+    border-radius: 6px;
+    spacing: 6px;
     transition: background-color 150ms ease;
 }
 
