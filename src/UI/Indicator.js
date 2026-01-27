@@ -1971,14 +1971,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const visibleTop = currentScroll;
             const visibleBottom = currentScroll + scrollViewHeight;
             
+            // Small threshold to handle edge cases (1 pixel)
+            const threshold = 1;
+            
             // Check if item is above visible area
-            if (itemTop < visibleTop) {
+            if (itemTop < visibleTop - threshold) {
                 // Scroll up to show the item at the top
                 adj.value = Math.max(0, itemTop);
             }
-            // Check if item is below visible area
-            else if (itemBottom > visibleBottom) {
+            // Check if item is at or below the bottom edge of visible area
+            // This includes when item is exactly at the bottom edge
+            else if (itemBottom >= visibleBottom - threshold) {
                 // Scroll down to show the item at the bottom
+                // Position the item so its bottom edge aligns with the scroll view's bottom
                 const newScroll = itemBottom - scrollViewHeight;
                 adj.value = Math.max(0, newScroll);
             }
