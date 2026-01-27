@@ -455,6 +455,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     this._updateSelection();
                     this._scrollToSelected();
+                    // Transfer focus to menu container to enter navigation mode
+                    // This allows subsequent arrow keys to be handled by menu's key handler
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                        this.menu.actor.grab_key_focus();
+                        return GLib.SOURCE_REMOVE;
+                    });
                     return Clutter.EVENT_STOP;
                 } else if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
                     if (this._items.length === 0) return Clutter.EVENT_STOP;
@@ -467,6 +473,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     this._updateSelection();
                     this._scrollToSelected();
+                    // Transfer focus to menu container to enter navigation mode
+                    // This allows subsequent arrow keys to be handled by menu's key handler
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                        this.menu.actor.grab_key_focus();
+                        return GLib.SOURCE_REMOVE;
+                    });
                     return Clutter.EVENT_STOP;
                 }
             }
