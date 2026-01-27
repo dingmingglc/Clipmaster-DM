@@ -98,6 +98,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         menuItem.add_child(this._contentBox);
         this.menu.addMenuItem(menuItem);
+        
+        // Clear hover state when mouse leaves the main content area
+        this._contentBox.connect('leave-event', () => {
+            this._clearAllHoverStates();
+            return Clutter.EVENT_PROPAGATE;
+        });
 
         this._buildHeader();
         this._buildSearchBar();
@@ -1082,6 +1088,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }, 'fix-menu-position');
     }
 
+    _clearAllHoverStates() {
+        if (this._itemsBox) {
+            const children = this._itemsBox.get_children();
+            children.forEach(child => {
+                if (child.hover !== undefined) {
+                    child.hover = false;
+                }
+                // Remove any hover-related style classes
+                child.remove_style_pseudo_class('hover');
+            });
+        }
+    }
+
     _onMenuClosed() {
         debugLog('Menu closed');
         this._closeContextPanel();
@@ -1090,6 +1109,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (this._tooltip) {
             this._tooltip.visible = false;
         }
+        
+        // Clear hover state from all items when menu closes
+        this._clearAllHoverStates();
     }
 
     // Only handle clicks when menu is closed (to open it).
