@@ -1957,41 +1957,70 @@ class ClipMasterIndicator extends PanelMenu.Button {
             }
             
             // Calculate cumulative Y position by summing heights of all items before selected
+            // This is the position within the itemsBox (scrollable content)
             let itemTop = 0;
             for (let i = 0; i < this._selectedIndex; i++) {
-                if (this._itemRows[i] && this._itemRows[i].height > 0) {
-                    itemTop += this._itemRows[i].height;
+                if (this._itemRows[i]) {
+                    // Use allocation box height if available, otherwise use height
+                    const allocation = this._itemRows[i].get_allocation_box();
+                    const itemHeight = allocation ? allocation.y2 - allocation.y1 : this._itemRows[i].height;
+                    if (itemHeight > 0) {
+                        itemTop += itemHeight;
+                    }
                 }
             }
             
-            const itemHeight = selected.height;
+            // Get item height
+            const allocation = selected.get_allocation_box();
+            const itemHeight = allocation ? allocation.y2 - allocation.y1 : selected.height;
             const itemBottom = itemTop + itemHeight;
+            
             const scrollViewHeight = this._scrollView.height;
             const currentScroll = adj.value;
             const visibleTop = currentScroll;
             const visibleBottom = currentScroll + scrollViewHeight;
             
+            debugLog(`_scrollToSelected: index=${this._selectedIndex}, itemTop=${itemTop}, itemBottom=${itemBottom}, itemHeight=${itemHeight}, scrollViewHeight=${scrollViewHeight}, currentScroll=${currentScroll}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.upper=${adj.upper}, adj.lower=${adj.lower}`);
+            
             // Small threshold to handle edge cases (1 pixel)
             const threshold = 1;
+            let needsScroll = false;
+            let newScrollValue = currentScroll;
             
             // Check if item is above visible area
             if (itemTop < visibleTop - threshold) {
                 // Scroll up to show the item at the top
-                adj.value = Math.max(0, itemTop);
+                newScrollValue = Math.max(0, itemTop);
+                needsScroll = true;
+                debugLog(`_scrollToSelected: Item above visible area, scrolling up to ${newScrollValue}`);
             }
             // Check if item is at or below the bottom edge of visible area
             // This includes when item is exactly at the bottom edge
             else if (itemBottom >= visibleBottom - threshold) {
                 // Scroll down to show the item at the bottom
                 // Position the item so its bottom edge aligns with the scroll view's bottom
-                const newScroll = itemBottom - scrollViewHeight;
-                adj.value = Math.max(0, newScroll);
+                newScrollValue = Math.max(0, itemBottom - scrollViewHeight);
+                needsScroll = true;
+                debugLog(`_scrollToSelected: Item at/below bottom edge, scrolling down to ${newScrollValue}`);
             }
             
-            // Ensure we don't scroll beyond the content
-            const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
-            if (adj.value > maxScroll) {
-                adj.value = maxScroll;
+            if (needsScroll) {
+                // Ensure we don't scroll beyond the content
+                const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
+                if (newScrollValue > maxScroll) {
+                    newScrollValue = maxScroll;
+                }
+                
+                debugLog(`_scrollToSelected: Setting adj.value from ${adj.value} to ${newScrollValue}`);
+                
+                // Directly set the value - this should work in St.ScrollView
+                adj.value = newScrollValue;
+                
+                // Force update by accessing the value again
+                const verifyValue = adj.value;
+                debugLog(`_scrollToSelected: Verified adj.value is now ${verifyValue}`);
+            } else {
+                debugLog(`_scrollToSelected: No scroll needed, item is visible`);
             }
             
             return GLib.SOURCE_REMOVE;
