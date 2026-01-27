@@ -1072,7 +1072,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 const menuHeight = this.menu.actor.height || 550;
                 const x = monitor.x + monitor.width - menuWidth - 20;
                 // Adjust Y based on panel visibility
-                const y = isPanelVisible ? monitor.y + 25 : monitor.y + 10;
+                const y = isPanelVisible ? monitor.y + 10 : monitor.y + 5;
                 
                 this.menu.actor.set_position(x, y);
                 debugLog(`Menu repositioned to: ${x}, ${y} (panel visible: ${isPanelVisible})`);
