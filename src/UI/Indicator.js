@@ -1945,10 +1945,23 @@ class ClipMasterIndicator extends PanelMenu.Button {
             return;
         }
         
+        // Get adjustment early to check if it exists
+        const adj = this._scrollView.vscroll?.adjustment;
+        if (!adj) {
+            // If no adjustment, just return (don't try to scroll)
+            return;
+        }
+        
         // Use a timeout to ensure layout is complete
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             try {
                 if (!selected || !this._scrollView || !this._itemRows) {
+                    return GLib.SOURCE_REMOVE;
+                }
+                
+                // Re-check adjustment
+                const adj = this._scrollView.vscroll?.adjustment;
+                if (!adj) {
                     return GLib.SOURCE_REMOVE;
                 }
                 
@@ -1963,10 +1976,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 const itemHeight = selected.height;
                 const itemBottom = itemTop + itemHeight;
                 const scrollViewHeight = this._scrollView.height;
-                
-                // Get current scroll position from adjustment
-                const adj = this._scrollView.vscroll?.adjustment;
-                const currentScroll = adj ? adj.value : 0;
+                const currentScroll = adj.value;
                 
                 const visibleTop = currentScroll;
                 const visibleBottom = currentScroll + scrollViewHeight;
@@ -1986,7 +1996,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     needsScroll = true;
                 }
                 
-                if (needsScroll && adj) {
+                if (needsScroll) {
                     // Ensure adjustment bounds are correct
                     const itemsBoxHeight = this._itemsBox.height;
                     if (itemsBoxHeight > 0) {
@@ -2000,44 +2010,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     newScrollValue = Math.min(newScrollValue, maxScroll);
                     newScrollValue = Math.max(0, newScrollValue);
                     
-                    // Debug: log the values
-                    debugLog(`_scrollToSelected: currentScroll=${currentScroll}, newScrollValue=${newScrollValue}, adj.upper=${adj.upper}, scrollViewHeight=${scrollViewHeight}`);
-                    
-                    // Try multiple methods to ensure scrolling works
-                    // Method 1: Direct assignment
+                    // Simple approach: just set the value
                     adj.value = newScrollValue;
-                    
-                    // Method 2: Try ease animation if available
-                    if (typeof adj.ease === 'function') {
-                        const currentValue = adj.value;
-                        if (Math.abs(newScrollValue - currentValue) > 0.1) {
-                            const mode = Clutter.AnimationMode.EASE_OUT_CUBIC;
-                            adj.ease(newScrollValue, 150, mode);
-                        }
-                    }
-                    
-                    // Method 3: Try vscroll methods if available
-                    const vscroll = this._scrollView.vscroll;
-                    if (vscroll) {
-                        // Try scroll_to_item if available
-                        if (typeof vscroll.scroll_to_item === 'function') {
-                            vscroll.scroll_to_item(selected);
-                        }
-                        // Try ensure_visible if available
-                        if (typeof vscroll.ensure_visible === 'function') {
-                            vscroll.ensure_visible(selected);
-                        }
-                    }
-                    
-                    // Method 4: Force update by invalidating
-                    this._scrollView.invalidate_allocation();
-                    this._itemsBox.invalidate_allocation();
-                    
-                    // Verify the value was set
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        debugLog(`_scrollToSelected: After setting, adj.value=${adj.value}, expected=${newScrollValue}`);
-                        return GLib.SOURCE_REMOVE;
-                    });
                 }
             } catch (e) {
                 debugLog(`_scrollToSelected error: ${e.message}`);
