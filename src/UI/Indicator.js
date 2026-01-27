@@ -373,6 +373,48 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
     }
 
+    /**
+     * Check if the panel (Dash to Panel) is currently visible
+     * @returns {boolean} True if panel is visible, false if hidden
+     */
+    _isPanelVisible() {
+        try {
+            // Check if this button (indicator) is visible
+            if (!this.visible || !this.get_parent()) {
+                return false;
+            }
+            
+            // Check if panel is visible
+            if (Main.panel && Main.panel.visible !== undefined) {
+                if (!Main.panel.visible) {
+                    return false;
+                }
+            }
+            
+            // Check button position - if it's off-screen or at (0,0), panel is likely hidden
+            const [x, y] = this.get_transformed_position();
+            const [w, h] = this.get_size();
+            
+            // If button is at (0,0) or has zero size, panel is likely hidden
+            if ((x === 0 && y === 0 && w === 0 && h === 0) || w === 0 || h === 0) {
+                return false;
+            }
+            
+            // Check if button is actually on screen
+            const monitor = Main.layoutManager.primaryMonitor;
+            if (x < monitor.x || y < monitor.y || 
+                x > monitor.x + monitor.width || y > monitor.y + monitor.height) {
+                return false;
+            }
+            
+            return true;
+        } catch (e) {
+            debugLog(`Error checking panel visibility: ${e.message}`);
+            // Default to visible if we can't determine
+            return true;
+        }
+    }
+
     _buildSearchBar() {
         this._searchEntry = new St.Entry({
             style_class: 'clipmaster-search',
@@ -1020,18 +1062,20 @@ class ClipMasterIndicator extends PanelMenu.Button {
             
             const [menuX, menuY] = this.menu.actor.get_transformed_position();
             const monitor = Main.layoutManager.primaryMonitor;
+            const isPanelVisible = this._isPanelVisible();
             
-            // If menu is at top-left (0, 0 or very close), reposition it
-            if (menuX < 50 && menuY < 50) {
-                debugLog('Menu position incorrect, fixing...');
+            // If menu is at top-left (0, 0 or very close) OR panel is hidden, reposition it
+            if ((menuX < 50 && menuY < 50) || !isPanelVisible) {
+                debugLog(`Menu position incorrect or panel hidden (visible: ${isPanelVisible}), fixing...`);
                 // Position at top-right, similar to where Dash to Panel (top) would be
                 const menuWidth = this.menu.actor.width || 450;
                 const menuHeight = this.menu.actor.height || 550;
                 const x = monitor.x + monitor.width - menuWidth - 20;
-                const y = monitor.y + 25; // Leave space for top panel
+                // Adjust Y based on panel visibility
+                const y = isPanelVisible ? monitor.y + 25 : monitor.y + 10;
                 
                 this.menu.actor.set_position(x, y);
-                debugLog(`Menu repositioned to: ${x}, ${y}`);
+                debugLog(`Menu repositioned to: ${x}, ${y} (panel visible: ${isPanelVisible})`);
             }
             
             return GLib.SOURCE_REMOVE;
