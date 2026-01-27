@@ -1945,42 +1945,76 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const scrollToRow = () => {
                 try {
                     if (!selectedRow || selectedRow.is_destroyed() || !this._scrollView) {
+                        debugLog(`_updateSelection: scrollToRow - invalid state`);
                         return;
                     }
                     
-                    debugLog(`_updateSelection: scrolling to row ${this._selectedIndex}`);
+                    // 确保布局完成
+                    this._scrollView.queue_relayout();
+                    this._itemsBox.queue_relayout();
+                    selectedRow.queue_relayout();
                     
-                    // Try AnimationUtils method first (Clipboard Indicator way)
+                    debugLog(`_updateSelection: scrolling to row ${this._selectedIndex}, scrollView.height=${this._scrollView.height}, row.height=${selectedRow.height}`);
+                    
+                    // 检查 row 是否是 scrollView 的子元素
+                    let isChild = false;
+                    let parent = selectedRow.get_parent();
+                    while (parent) {
+                        if (parent === this._scrollView) {
+                            isChild = true;
+                            break;
+                        }
+                        parent = parent.get_parent();
+                    }
+                    debugLog(`_updateSelection: row is child of scrollView: ${isChild}`);
+                    
+                    // 方法1: 使用 AnimationUtils (Clipboard Indicator 方式)
                     if (AnimationUtils && typeof AnimationUtils.ensureActorVisibleInScrollView === 'function') {
-                        AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
-                        debugLog(`_updateSelection: called AnimationUtils.ensureActorVisibleInScrollView`);
-                    } else {
-                        debugLog(`_updateSelection: AnimationUtils.ensureActorVisibleInScrollView not available`);
-                        
-                        // Fallback: use adjustment directly
-                        const adj = this._scrollView.vscroll?.adjustment;
-                        if (adj) {
-                            // Calculate position
-                            let itemTop = 0;
-                            for (let i = 0; i < this._selectedIndex; i++) {
-                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
-                                    itemTop += this._itemRows[i].height;
-                                }
-                            }
-                            const itemHeight = selectedRow.height;
-                            const itemBottom = itemTop + itemHeight;
-                            const scrollViewHeight = this._scrollView.height;
-                            const currentScroll = adj.value;
-                            
-                            if (itemBottom > currentScroll + scrollViewHeight) {
-                                const newScroll = itemBottom - scrollViewHeight;
-                                adj.value = Math.max(0, newScroll);
-                                debugLog(`_updateSelection: used fallback scroll, set adj.value to ${adj.value}`);
-                            }
+                        try {
+                            AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
+                            debugLog(`_updateSelection: called AnimationUtils.ensureActorVisibleInScrollView`);
+                        } catch (e) {
+                            debugLog(`_updateSelection: AnimationUtils error: ${e.message}`);
                         }
                     }
+                    
+                    // 方法2: 使用 adjustment 作为备用/补充（同时使用，不只在 AnimationUtils 不可用时）
+                    const adj = this._scrollView.vscroll?.adjustment;
+                    if (adj) {
+                        // 计算位置
+                        let itemTop = 0;
+                        for (let i = 0; i < this._selectedIndex; i++) {
+                            if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                                itemTop += this._itemRows[i].height;
+                            }
+                        }
+                        const itemHeight = selectedRow.height || 50;
+                        const itemBottom = itemTop + itemHeight;
+                        const scrollViewHeight = this._scrollView.height || 300;
+                        const currentScroll = adj.value;
+                        const visibleTop = currentScroll;
+                        const visibleBottom = currentScroll + scrollViewHeight;
+                        
+                        debugLog(`_updateSelection: fallback calc - itemTop=${itemTop}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}`);
+                        
+                        // 处理向上和向下滚动
+                        if (itemTop < visibleTop || itemBottom > visibleBottom) {
+                            let newScroll = currentScroll;
+                            if (itemTop < visibleTop) {
+                                // 向上滚动：项目在可见区域上方
+                                newScroll = Math.max(0, itemTop);
+                            } else if (itemBottom > visibleBottom) {
+                                // 向下滚动：项目在可见区域下方
+                                newScroll = Math.max(0, itemBottom - scrollViewHeight);
+                            }
+                            adj.value = newScroll;
+                            debugLog(`_updateSelection: used fallback scroll, set adj.value to ${adj.value}`);
+                        }
+                    } else {
+                        debugLog(`_updateSelection: no adjustment available`);
+                    }
                 } catch (e) {
-                    debugLog(`_updateSelection: scroll error: ${e.message}`);
+                    debugLog(`_updateSelection: scroll error: ${e.message}, stack: ${e.stack}`);
                 }
             };
             
