@@ -31,6 +31,28 @@ export const ItemRendererMixin = {
         row._item = item;
         row._index = index;
 
+        // List info (name + color class). We no longer color the whole row.
+        let listName = null;
+        let listColorCls = null;
+        if (item.listId) {
+            const list = this._database.getListById(item.listId);
+            if (list) {
+                listName = list?.name ? String(list.name) : null;
+
+                const listColorClassMap = {
+                    '#e74c3c': 'clipmaster-list-color-red',
+                    '#e67e22': 'clipmaster-list-color-orange',
+                    '#f1c40f': 'clipmaster-list-color-yellow',
+                    '#2ecc71': 'clipmaster-list-color-green',
+                    '#3498db': 'clipmaster-list-color-blue',
+                    '#9b59b6': 'clipmaster-list-color-purple',
+                    '#95a5a6': 'clipmaster-list-color-gray',
+                };
+                const maybeCls = listColorClassMap[String(list.color ?? '').toLowerCase()];
+                listColorCls = maybeCls || null;
+            }
+        }
+
         // Connect key-focus-in event to auto-scroll when item gets focus
         // This is the Clipboard Indicator way: when focus moves to an item, scroll to make it visible
         row.connect('key-focus-in', () => {
@@ -49,27 +71,6 @@ export const ItemRendererMixin = {
                 }
             }
         });
-
-        // Apply list color as background if item belongs to a list
-        if (item.listId) {
-            const list = this._database.getListById(item.listId);
-            if (list && list.color) {
-                // Fixed palette: prefer CSS classes over inline styles (so hover/selected can override cleanly)
-                const listColorClassMap = {
-                    '#e74c3c': 'clipmaster-list-color-red',
-                    '#e67e22': 'clipmaster-list-color-orange',
-                    '#f1c40f': 'clipmaster-list-color-yellow',
-                    '#2ecc71': 'clipmaster-list-color-green',
-                    '#3498db': 'clipmaster-list-color-blue',
-                    '#9b59b6': 'clipmaster-list-color-purple',
-                    '#95a5a6': 'clipmaster-list-color-gray',
-                };
-
-                const cls = listColorClassMap[String(list.color).toLowerCase()];
-                if (cls)
-                    row.add_style_class_name(cls);
-            }
-        }
 
         // Click handler
         row.connect('button-press-event', (actor, event) => {
@@ -160,6 +161,18 @@ export const ItemRendererMixin = {
 
         const iconSize = 12;
 
+        // List badge [ListName] with list-color background (instead of coloring the whole row)
+        if (listName) {
+            const listBadge = new St.Label({
+                text: `[${listName}]`,
+                style_class: 'clipmaster-list-badge',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            if (listColorCls)
+                listBadge.add_style_class_name(listColorCls);
+            bottomRow.add_child(listBadge);
+        }
+        
         // QR button for TEXT items
         if (item.type === ItemType.TEXT && QrCodeGenerator.canEncode(item.content || item.plainText)) {
             const qrButton = new St.Button({
@@ -183,20 +196,14 @@ export const ItemRendererMixin = {
         }
 
         // Type label [Text], [Code], etc.
-        let listName = null;
-        if (item.listId) {
-            const list = this._database.getListById(item.listId);
-            listName = list?.name ? String(list.name) : null;
-        }
-
         const typeLabel = new St.Label({
-            text: listName
-                ? `[${this._getTypeLabel(item.type)}] [${listName}]`
-                : `[${this._getTypeLabel(item.type)}]`,
+            text: `[${this._getTypeLabel(item.type)}]`,
             style_class: 'clipmaster-item-type-label',
             y_align: Clutter.ActorAlign.CENTER,
         });
         bottomRow.add_child(typeLabel);
+
+
 
         // Favorite button
         const favButton = new St.Button({
