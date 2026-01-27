@@ -1950,14 +1950,14 @@ class ClipMasterIndicator extends PanelMenu.Button {
             return;
         }
         
-        // Use a timeout to ensure layout is complete before calculating positions
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+        // Use a timeout to ensure layout is complete
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             try {
                 if (!selected || !this._scrollView || !this._itemRows) {
                     return GLib.SOURCE_REMOVE;
                 }
                 
-                // Calculate cumulative Y position by summing heights of all items before selected
+                // Calculate cumulative Y position by summing heights
                 let itemTop = 0;
                 for (let i = 0; i < this._selectedIndex; i++) {
                     if (this._itemRows[i] && this._itemRows[i].height > 0) {
@@ -1972,48 +1972,42 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 const visibleTop = currentScroll;
                 const visibleBottom = currentScroll + scrollViewHeight;
                 
-                // Small threshold to handle edge cases
+                // Check if we need to scroll
                 const threshold = 2;
                 let needsScroll = false;
                 let newScrollValue = currentScroll;
                 
-                // Check if item is above visible area
                 if (itemTop < visibleTop - threshold) {
+                    // Item is above visible area, scroll up
                     newScrollValue = Math.max(0, itemTop);
                     needsScroll = true;
-                }
-                // Check if item is at or below the bottom edge
-                else if (itemBottom >= visibleBottom - threshold) {
+                } else if (itemBottom >= visibleBottom - threshold) {
+                    // Item is at or below bottom edge, scroll down
                     newScrollValue = Math.max(0, itemBottom - scrollViewHeight);
                     needsScroll = true;
                 }
                 
                 if (needsScroll) {
-                    // Ensure adj.upper reflects the actual content height
+                    // Ensure adjustment bounds are correct
                     const itemsBoxHeight = this._itemsBox.height;
-                    if (itemsBoxHeight > 0 && adj.upper !== itemsBoxHeight) {
-                        adj.upper = itemsBoxHeight;
+                    if (itemsBoxHeight > 0) {
+                        // Update upper bound if needed
+                        if (adj.upper < itemsBoxHeight) {
+                            adj.set_upper(itemsBoxHeight);
+                        }
                     }
                     
-                    // Ensure we don't scroll beyond the content
+                    // Clamp the scroll value
                     const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
-                    if (newScrollValue > maxScroll) {
-                        newScrollValue = maxScroll;
+                    newScrollValue = Math.min(newScrollValue, maxScroll);
+                    newScrollValue = Math.max(0, newScrollValue);
+                    
+                    // Set the scroll value using set_value if available
+                    if (typeof adj.set_value === 'function') {
+                        adj.set_value(newScrollValue);
+                    } else {
+                        adj.value = newScrollValue;
                     }
-                    
-                    // Set the scroll value
-                    adj.value = newScrollValue;
-                    
-                    // Force update by emitting changed signal if available
-                    if (adj.emit) {
-                        adj.emit('changed');
-                    }
-                    
-                    // Force a repaint and relayout
-                    this._scrollView.queue_relayout();
-                    this._itemsBox.queue_relayout();
-                    this._scrollView.queue_repaint();
-                    this._itemsBox.queue_repaint();
                 }
             } catch (e) {
                 debugLog(`_scrollToSelected error: ${e.message}`);
