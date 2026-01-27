@@ -216,12 +216,112 @@
     transition: background-color 150ms ease;
 }
 
+/* ============================================
+   List Color Palette (Fixed) - Item Row Styling
+   Use CSS classes instead of inline styles so hover/selected can override.
+   ============================================ */
+.clipmaster-item.clipmaster-list-color-red {
+    background-color: #e74c3c;
+}
+
+.clipmaster-item.clipmaster-list-color-orange {
+    background-color: #e67e22;
+}
+
+.clipmaster-item.clipmaster-list-color-yellow {
+    background-color: #f1c40f;
+}
+
+.clipmaster-item.clipmaster-list-color-green {
+    background-color: #2ecc71;
+}
+
+.clipmaster-item.clipmaster-list-color-blue {
+    background-color: #3498db;
+}
+
+.clipmaster-item.clipmaster-list-color-purple {
+    background-color: #9b59b6;
+}
+
+.clipmaster-item.clipmaster-list-color-gray {
+    background-color: #95a5a6;
+}
+
+/* Apply readable text/icon colors only while the list background is visible (not hovered/selected). */
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-red:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #ffffff !important;
+}
+
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-orange:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #ffffff !important;
+}
+
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-blue:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #ffffff !important;
+}
+
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-purple:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #ffffff !important;
+}
+
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-gray:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #ffffff !important;
+}
+
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-yellow:not(:hover):not(.selected) .clipmaster-action-button,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-number,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-title,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-preview,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-time,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-type-label,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-item-fav,
+.clipmaster-item.clipmaster-list-color-green:not(:hover):not(.selected) .clipmaster-action-button {
+    color: #1a1a1a !important;
+}
+
 .clipmaster-item:hover {
-    background-color: rgba(137, 180, 250, 0.1);
+    background-color: rgba(137, 180, 250, 0.1) !important;
 }
 
 .clipmaster-popup.light .clipmaster-item:hover {
-    background-color: rgba(30, 102, 245, 0.12);
+    background-color: rgba(30, 102, 245, 0.12) !important;
 }
 
 .clipmaster-popup.light .clipmaster-item:hover .clipmaster-item-title {
@@ -245,11 +345,11 @@
 }
 
 .clipmaster-item.selected {
-    background-color: #89b4fa;
+    background-color: #89b4fa !important;
 }
 
 .clipmaster-popup.light .clipmaster-item.selected {
-    background-color: #1e66f5;
+    background-color: #1e66f5 !important;
 }
 
 .clipmaster-item.selected * {
@@ -321,13 +421,6 @@
     color: #df8e1d;
 }
 
-.clipmaster-item-fav-inactive {
-    color: #ffffff;
-}
-
-.clipmaster-popup.light .clipmaster-item-fav-inactive {
-    color: #000000;
-}
 
 .clipmaster-fav-button {
     background-color: transparent;
@@ -652,18 +745,6 @@
     color: #1e1e2e;
 }
 
-.clipmaster-popup.theme-catppuccin .clipmaster-item:hover {
-    background-color: rgba(137, 180, 250, 0.1);
-}
-
-.clipmaster-popup.theme-catppuccin .clipmaster-item.selected {
-    background-color: #89b4fa;
-}
-
-.clipmaster-popup.theme-catppuccin .clipmaster-item.selected * {
-    color: #1e1e2e !important;
-}
-
 .clipmaster-popup.theme-catppuccin .clipmaster-item-number {
     color: #6c7086;
 }
@@ -682,11 +763,6 @@
 
 .clipmaster-popup.theme-catppuccin .clipmaster-item-fav {
     color: #f9e2af;
-}
-
-.clipmaster-popup.theme-catppuccin .clipmaster-item-fav-inactive {
-    color: #6c7086;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-catppuccin .clipmaster-fav-button:hover {
@@ -779,11 +855,11 @@
 }
 
 .clipmaster-popup.theme-dracula .clipmaster-item:hover {
-    background-color: rgba(189, 147, 249, 0.1);
+    background-color: rgba(189, 147, 249, 0.1) !important;
 }
 
 .clipmaster-popup.theme-dracula .clipmaster-item.selected {
-    background-color: #bd93f9;
+    background-color: #bd93f9 !important;
 }
 
 .clipmaster-popup.theme-dracula .clipmaster-item.selected * {
@@ -808,11 +884,6 @@
 
 .clipmaster-popup.theme-dracula .clipmaster-item-fav {
     color: #ffb86c;
-}
-
-.clipmaster-popup.theme-dracula .clipmaster-item-fav-inactive {
-    color: #6272a4;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-dracula .clipmaster-fav-button:hover {
@@ -905,11 +976,11 @@
 }
 
 .clipmaster-popup.theme-nord .clipmaster-item:hover {
-    background-color: rgba(129, 161, 193, 0.1);
+    background-color: rgba(129, 161, 193, 0.1) !important;
 }
 
 .clipmaster-popup.theme-nord .clipmaster-item.selected {
-    background-color: #81a1c1;
+    background-color: #81a1c1 !important;
 }
 
 .clipmaster-popup.theme-nord .clipmaster-item.selected * {
@@ -934,11 +1005,6 @@
 
 .clipmaster-popup.theme-nord .clipmaster-item-fav {
     color: #ebcb8b;
-}
-
-.clipmaster-popup.theme-nord .clipmaster-item-fav-inactive {
-    color: #4c566a;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-nord .clipmaster-fav-button:hover {
@@ -1031,11 +1097,11 @@
 }
 
 .clipmaster-popup.theme-gruvbox .clipmaster-item:hover {
-    background-color: rgba(131, 165, 152, 0.1);
+    background-color: rgba(131, 165, 152, 0.1) !important;
 }
 
 .clipmaster-popup.theme-gruvbox .clipmaster-item.selected {
-    background-color: #83a598;
+    background-color: #83a598 !important;
 }
 
 .clipmaster-popup.theme-gruvbox .clipmaster-item.selected * {
@@ -1060,11 +1126,6 @@
 
 .clipmaster-popup.theme-gruvbox .clipmaster-item-fav {
     color: #fabd2f;
-}
-
-.clipmaster-popup.theme-gruvbox .clipmaster-item-fav-inactive {
-    color: #928374;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-gruvbox .clipmaster-fav-button:hover {
@@ -1157,11 +1218,11 @@
 }
 
 .clipmaster-popup.theme-onedark .clipmaster-item:hover {
-    background-color: rgba(97, 175, 239, 0.1);
+    background-color: rgba(97, 175, 239, 0.1) !important;
 }
 
 .clipmaster-popup.theme-onedark .clipmaster-item.selected {
-    background-color: #61afef;
+    background-color: #61afef !important;
 }
 
 .clipmaster-popup.theme-onedark .clipmaster-item.selected * {
@@ -1186,11 +1247,6 @@
 
 .clipmaster-popup.theme-onedark .clipmaster-item-fav {
     color: #e5c07b;
-}
-
-.clipmaster-popup.theme-onedark .clipmaster-item-fav-inactive {
-    color: #5c6370;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-onedark .clipmaster-fav-button:hover {
@@ -1354,11 +1410,11 @@
 }
 
 .clipmaster-popup.theme-adwaita .clipmaster-item:hover {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: rgba(255, 255, 255, 0.06) !important;
 }
 
 .clipmaster-popup.theme-adwaita.light .clipmaster-item:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: rgba(0, 0, 0, 0.08) !important;
 }
 
 /* Light theme item hover - force dark text colors */
@@ -1371,7 +1427,7 @@
 }
 
 .clipmaster-popup.theme-adwaita .clipmaster-item.selected {
-    background-color: #3584e4;
+    background-color: #3584e4 !important;
 }
 
 .clipmaster-popup.theme-adwaita .clipmaster-item.selected * {
@@ -1412,14 +1468,6 @@
 
 .clipmaster-popup.theme-adwaita .clipmaster-item-fav {
     color: #f5c211;
-}
-
-.clipmaster-popup.theme-adwaita .clipmaster-item-fav-inactive {
-    color: rgba(255, 255, 255, 0.3);
-}
-
-.clipmaster-popup.theme-adwaita.light .clipmaster-item-fav-inactive {
-    color: rgba(0, 0, 0, 0.25);
 }
 
 .clipmaster-popup.theme-adwaita .clipmaster-fav-button:hover {
@@ -1533,11 +1581,11 @@
 }
 
 .clipmaster-popup.theme-monokai .clipmaster-item:hover {
-    background-color: rgba(102, 217, 239, 0.1);
+    background-color: rgba(102, 217, 239, 0.1) !important;
 }
 
 .clipmaster-popup.theme-monokai .clipmaster-item.selected {
-    background-color: #66d9ef;
+    background-color: #66d9ef !important;
 }
 
 .clipmaster-popup.theme-monokai .clipmaster-item.selected * {
@@ -1562,11 +1610,6 @@
 
 .clipmaster-popup.theme-monokai .clipmaster-item-fav {
     color: #f92672;
-}
-
-.clipmaster-popup.theme-monokai .clipmaster-item-fav-inactive {
-    color: #75715e;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-monokai .clipmaster-fav-button:hover {
@@ -1659,11 +1702,11 @@
 }
 
 .clipmaster-popup.theme-solarized .clipmaster-item:hover {
-    background-color: rgba(38, 139, 210, 0.1);
+    background-color: rgba(38, 139, 210, 0.1) !important;
 }
 
 .clipmaster-popup.theme-solarized .clipmaster-item.selected {
-    background-color: #268bd2;
+    background-color: #268bd2 !important;
 }
 
 .clipmaster-popup.theme-solarized .clipmaster-item.selected * {
@@ -1688,11 +1731,6 @@
 
 .clipmaster-popup.theme-solarized .clipmaster-item-fav {
     color: #b58900;
-}
-
-.clipmaster-popup.theme-solarized .clipmaster-item-fav-inactive {
-    color: #586e75;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-solarized .clipmaster-fav-button:hover {
@@ -1785,11 +1823,11 @@
 }
 
 .clipmaster-popup.theme-tokyonight .clipmaster-item:hover {
-    background-color: rgba(122, 162, 247, 0.1);
+    background-color: rgba(122, 162, 247, 0.1) !important;
 }
 
 .clipmaster-popup.theme-tokyonight .clipmaster-item.selected {
-    background-color: #7aa2f7;
+    background-color: #7aa2f7 !important;
 }
 
 .clipmaster-popup.theme-tokyonight .clipmaster-item.selected * {
@@ -1814,11 +1852,6 @@
 
 .clipmaster-popup.theme-tokyonight .clipmaster-item-fav {
     color: #e0af68;
-}
-
-.clipmaster-popup.theme-tokyonight .clipmaster-item-fav-inactive {
-    color: #565f89;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-tokyonight .clipmaster-fav-button:hover {
@@ -1911,11 +1944,11 @@
 }
 
 .clipmaster-popup.theme-rosepine .clipmaster-item:hover {
-    background-color: rgba(156, 207, 216, 0.1);
+    background-color: rgba(156, 207, 216, 0.1) !important;
 }
 
 .clipmaster-popup.theme-rosepine .clipmaster-item.selected {
-    background-color: #9ccfd8;
+    background-color: #9ccfd8 !important;
 }
 
 .clipmaster-popup.theme-rosepine .clipmaster-item.selected * {
@@ -1940,11 +1973,6 @@
 
 .clipmaster-popup.theme-rosepine .clipmaster-item-fav {
     color: #f6c177;
-}
-
-.clipmaster-popup.theme-rosepine .clipmaster-item-fav-inactive {
-    color: #6e6a86;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-rosepine .clipmaster-fav-button:hover {
@@ -2037,11 +2065,11 @@
 }
 
 .clipmaster-popup.theme-material .clipmaster-item:hover {
-    background-color: rgba(100, 181, 246, 0.1);
+    background-color: rgba(100, 181, 246, 0.1) !important;
 }
 
 .clipmaster-popup.theme-material .clipmaster-item.selected {
-    background-color: #64b5f6;
+    background-color: #64b5f6 !important;
 }
 
 .clipmaster-popup.theme-material .clipmaster-item.selected * {
@@ -2066,11 +2094,6 @@
 
 .clipmaster-popup.theme-material .clipmaster-item-fav {
     color: #ffc107;
-}
-
-.clipmaster-popup.theme-material .clipmaster-item-fav-inactive {
-    color: #757575;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-material .clipmaster-fav-button:hover {
@@ -2163,11 +2186,11 @@
 }
 
 .clipmaster-popup.theme-ayu .clipmaster-item:hover {
-    background-color: rgba(57, 186, 230, 0.1);
+    background-color: rgba(57, 186, 230, 0.1) !important;
 }
 
 .clipmaster-popup.theme-ayu .clipmaster-item.selected {
-    background-color: #39bae6;
+    background-color: #39bae6 !important;
 }
 
 .clipmaster-popup.theme-ayu .clipmaster-item.selected * {
@@ -2192,11 +2215,6 @@
 
 .clipmaster-popup.theme-ayu .clipmaster-item-fav {
     color: #ffb454;
-}
-
-.clipmaster-popup.theme-ayu .clipmaster-item-fav-inactive {
-    color: #5c6773;
-    opacity: 0.5;
 }
 
 .clipmaster-popup.theme-ayu .clipmaster-fav-button:hover {
@@ -2259,7 +2277,7 @@
 }
 
 .clipmaster-popup.theme-catppuccin.light .clipmaster-item:hover {
-    background-color: rgba(30, 102, 245, 0.1);
+    background-color: rgba(30, 102, 245, 0.1) !important;
 }
 
 .clipmaster-popup.theme-catppuccin.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2304,7 +2322,7 @@
 }
 
 .clipmaster-popup.theme-dracula.light .clipmaster-item:hover {
-    background-color: rgba(139, 233, 253, 0.15);
+    background-color: rgba(139, 233, 253, 0.15) !important;
 }
 
 .clipmaster-popup.theme-dracula.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2349,7 +2367,7 @@
 }
 
 .clipmaster-popup.theme-nord.light .clipmaster-item:hover {
-    background-color: rgba(136, 192, 208, 0.2);
+    background-color: rgba(136, 192, 208, 0.2) !important;
 }
 
 .clipmaster-popup.theme-nord.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2394,7 +2412,7 @@
 }
 
 .clipmaster-popup.theme-gruvbox.light .clipmaster-item:hover {
-    background-color: rgba(215, 153, 33, 0.15);
+    background-color: rgba(215, 153, 33, 0.15) !important;
 }
 
 .clipmaster-popup.theme-gruvbox.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2439,7 +2457,7 @@
 }
 
 .clipmaster-popup.theme-onedark.light .clipmaster-item:hover {
-    background-color: rgba(64, 120, 242, 0.1);
+    background-color: rgba(64, 120, 242, 0.1) !important;
 }
 
 .clipmaster-popup.theme-onedark.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2484,7 +2502,7 @@
 }
 
 .clipmaster-popup.theme-monokai.light .clipmaster-item:hover {
-    background-color: rgba(166, 226, 46, 0.15);
+    background-color: rgba(166, 226, 46, 0.15) !important;
 }
 
 .clipmaster-popup.theme-monokai.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2529,7 +2547,7 @@
 }
 
 .clipmaster-popup.theme-solarized.light .clipmaster-item:hover {
-    background-color: rgba(38, 139, 210, 0.1);
+    background-color: rgba(38, 139, 210, 0.1) !important;
 }
 
 .clipmaster-popup.theme-solarized.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2574,7 +2592,7 @@
 }
 
 .clipmaster-popup.theme-tokyonight.light .clipmaster-item:hover {
-    background-color: rgba(55, 96, 191, 0.1);
+    background-color: rgba(55, 96, 191, 0.1) !important;
 }
 
 .clipmaster-popup.theme-tokyonight.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2619,7 +2637,7 @@
 }
 
 .clipmaster-popup.theme-rosepine.light .clipmaster-item:hover {
-    background-color: rgba(215, 130, 126, 0.15);
+    background-color: rgba(215, 130, 126, 0.15) !important;
 }
 
 .clipmaster-popup.theme-rosepine.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2664,7 +2682,7 @@
 }
 
 .clipmaster-popup.theme-material.light .clipmaster-item:hover {
-    background-color: rgba(33, 150, 243, 0.1);
+    background-color: rgba(33, 150, 243, 0.1) !important;
 }
 
 .clipmaster-popup.theme-material.light .clipmaster-item:hover .clipmaster-item-title,
@@ -2709,7 +2727,7 @@
 }
 
 .clipmaster-popup.theme-ayu.light .clipmaster-item:hover {
-    background-color: rgba(57, 186, 230, 0.12);
+    background-color: rgba(57, 186, 230, 0.12) !important;
 }
 
 .clipmaster-popup.theme-ayu.light .clipmaster-item:hover .clipmaster-item-title,

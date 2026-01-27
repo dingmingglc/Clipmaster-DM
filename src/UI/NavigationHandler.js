@@ -86,11 +86,24 @@ export const NavigationHandlerMixin = {
                 const upper = useAdj.upper ?? 0;
                 const pageSize = useAdj.page_size ?? (scrollView.height || 300);
 
-                // Estimate row top Y by summing previous rows
-                let itemY = 0;
-                for (let i = 0; i < this._selectedIndex; i++) {
-                    const r = this._itemRows?.[i];
-                    if (r?.height > 0) itemY += r.height;
+                // Fast path: compute row Y relative to items box using transformed positions (O(1))
+                let itemY = null;
+                try {
+                    if (typeof selectedRow.get_transformed_position === 'function' &&
+                        typeof this._itemsBox?.get_transformed_position === 'function') {
+                        const [, rowY] = selectedRow.get_transformed_position();
+                        const [, boxY] = this._itemsBox.get_transformed_position();
+                        itemY = rowY - boxY;
+                    }
+                } catch (_) {}
+
+                // Fallback: estimate row top Y by summing previous row heights (O(n))
+                if (itemY === null) {
+                    itemY = 0;
+                    for (let i = 0; i < this._selectedIndex; i++) {
+                        const r = this._itemRows?.[i];
+                        if (r?.height > 0) itemY += r.height;
+                    }
                 }
 
                 const itemHeight = selectedRow.height || 50;
@@ -117,11 +130,42 @@ export const NavigationHandlerMixin = {
 
         scrollToRow();
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => { scrollToRow(); return GLib.SOURCE_REMOVE; });
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => { scrollToRow(); return GLib.SOURCE_REMOVE; });
     },
 
     _onKeyPress(actor, event) {
         const symbol = event.get_key_symbol();
+
+        debugLog(() => `_onKeyPress: symbol=${symbol}, KEY_Delete=${Clutter.KEY_Delete}, KEY_KP_Delete=${Clutter.KEY_KP_Delete}`);
+
+        // Handle Delete key BEFORE checking search entry focus
+        // This ensures DEL works even when search entry has focus (but only if search is empty)
+        if (symbol === Clutter.KEY_Delete || symbol === Clutter.KEY_KP_Delete) {
+            const keyFocus = global.stage.get_key_focus();
+            const searchText = this._searchEntry?.get_text() || '';
+            
+            // If search entry has focus and has text, let it handle DEL (delete character)
+            if ((keyFocus === this._searchEntry || keyFocus === this._searchEntry?.clutter_text) && searchText.length > 0) {
+                debugLog(() => `_onKeyPress: DEL in search entry with text, propagating`);
+                return Clutter.EVENT_PROPAGATE;
+            }
+            
+            // Otherwise, delete the selected item
+            debugLog(() => `_onKeyPress: DEL key pressed, items.length=${this._items.length}, selectedIndex=${this._selectedIndex}`);
+            if (this._items.length > 0 && this._selectedIndex >= 0 && this._selectedIndex < this._items.length) {
+                const itemId = this._items[this._selectedIndex].id;
+                debugLog(() => `_onKeyPress: Deleting item id=${itemId} at index ${this._selectedIndex}`);
+                this._database.deleteItem(itemId);
+                this._loadItems();
+                // After deletion, adjust selectedIndex if needed
+                if (this._selectedIndex >= this._items.length) {
+                    this._selectedIndex = Math.max(0, this._items.length - 1);
+                    this._updateSelection();
+                }
+            } else {
+                debugLog(() => `_onKeyPress: DEL ignored - no items or invalid selectedIndex`);
+            }
+            return Clutter.EVENT_STOP;
+        }
 
         // Arrow keys: always handle here for navigation
         const isArrowKey =
@@ -170,14 +214,6 @@ export const NavigationHandlerMixin = {
 
         if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter) {
             this._pasteSelected();
-            return Clutter.EVENT_STOP;
-        }
-
-        if (symbol === Clutter.KEY_Delete) {
-            if (this._items.length > 0 && this._selectedIndex >= 0 && this._selectedIndex < this._items.length) {
-                this._database.deleteItem(this._items[this._selectedIndex].id);
-                this._loadItems();
-            }
             return Clutter.EVENT_STOP;
         }
 

@@ -107,8 +107,13 @@ export class ImageStorage {
 
             // Get file sizes
             const imageFile = Gio.File.new_for_path(savedAsWebp ? imagePath : imagePath.replace('.webp', '.png'));
-            const imageInfo = imageFile.query_info('standard::size', Gio.FileQueryInfoFlags.NONE, null);
-            const savedImageSize = imageInfo.get_size();
+            const imageInfo = await imageFile.query_info_async(
+                'standard::size',
+                Gio.FileQueryInfoFlags.NONE,
+                GLib.PRIORITY_DEFAULT,
+                null
+            );
+            const savedImageSize = imageInfo?.get_size?.() ?? 0;
 
             const thumbnailSize = thumbnailBase64 ? Math.ceil(thumbnailBase64.length * 0.75) : 0;
 

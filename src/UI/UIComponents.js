@@ -153,10 +153,31 @@ export const UIComponentsMixin = {
             this._pasteSelected();
         });
 
-        // Handle arrow keys in search entry - if empty, navigate items instead
-        this._searchEntry.connect('key-press-event', (actor, event) => {
+        // Handle keys in the actual text actor (this is what receives key focus)
+        this._searchEntry.clutter_text.connect('key-press-event', (actor, event) => {
             const symbol = event.get_key_symbol();
             const text = this._searchEntry.get_text();
+
+            // When search entry is focused: if there is a selected item, DEL should delete it
+            // (instead of deleting text), matching the footer hint.
+            if (symbol === Clutter.KEY_Delete || symbol === Clutter.KEY_KP_Delete) {
+                debugLog(() => `_searchEntry: DEL pressed, items.length=${this._items.length}, selectedIndex=${this._selectedIndex}, text.length=${text.length}`);
+                if (this._items.length > 0 && this._selectedIndex >= 0 && this._selectedIndex < this._items.length) {
+                    const itemId = this._items[this._selectedIndex].id;
+                    debugLog(() => `_searchEntry: Deleting item id=${itemId} at index ${this._selectedIndex}`);
+                    this._database.deleteItem(itemId);
+                    this._loadItems();
+
+                    if (this._selectedIndex >= this._items.length) {
+                        this._selectedIndex = Math.max(0, this._items.length - 1);
+                        this._updateSelection();
+                    }
+                    return Clutter.EVENT_STOP;
+                }
+
+                // No valid selection -> let the entry handle DEL normally (delete character).
+                return Clutter.EVENT_PROPAGATE;
+            }
 
             // If search is empty and arrow keys are pressed, navigate items
             if (text.length === 0) {

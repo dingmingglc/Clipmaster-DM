@@ -3,6 +3,7 @@
  * Extracted from Indicator.js for better code organization
  */
 
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
@@ -50,24 +51,23 @@ export const ItemRendererMixin = {
         });
 
         // Apply list color as background if item belongs to a list
-        let listTextColor = null;
         if (item.listId) {
             const list = this._database.getListById(item.listId);
             if (list && list.color) {
-                // Fixed color-to-text mapping for readability
-                const textColorMap = {
-                    '#e74c3c': '#ffffff', // red -> white
-                    '#e67e22': '#ffffff', // orange -> white
-                    '#f1c40f': '#1a1a1a', // yellow -> dark
-                    '#2ecc71': '#1a1a1a', // green -> dark
-                    '#3498db': '#ffffff', // blue -> white
-                    '#9b59b6': '#ffffff', // purple -> white
-                    '#95a5a6': '#ffffff', // gray -> white
+                // Fixed palette: prefer CSS classes over inline styles (so hover/selected can override cleanly)
+                const listColorClassMap = {
+                    '#e74c3c': 'clipmaster-list-color-red',
+                    '#e67e22': 'clipmaster-list-color-orange',
+                    '#f1c40f': 'clipmaster-list-color-yellow',
+                    '#2ecc71': 'clipmaster-list-color-green',
+                    '#3498db': 'clipmaster-list-color-blue',
+                    '#9b59b6': 'clipmaster-list-color-purple',
+                    '#95a5a6': 'clipmaster-list-color-gray',
                 };
-                listTextColor = textColorMap[list.color] || '#ffffff';
-                row.set_style(`background-color: ${list.color};`);
-                row._listColor = list.color;
-                row._textColor = listTextColor;
+
+                const cls = listColorClassMap[String(list.color).toLowerCase()];
+                if (cls)
+                    row.add_style_class_name(cls);
             }
         }
 
@@ -97,7 +97,6 @@ export const ItemRendererMixin = {
             text: (index + 1).toString(),
             style_class: 'clipmaster-item-number',
         });
-        if (listTextColor) numLabel.set_style(`color: ${listTextColor};`);
         row.add_child(numLabel);
 
         // Content box
@@ -115,7 +114,6 @@ export const ItemRendererMixin = {
                 x_expand: true,
                 x_align: Clutter.ActorAlign.START,
             });
-            if (listTextColor) titleLabel.set_style(`color: ${listTextColor};`);
             titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
             contentBox.add_child(titleLabel);
         }
@@ -140,7 +138,6 @@ export const ItemRendererMixin = {
             x_expand: true,
             x_align: Clutter.ActorAlign.START,
         });
-        if (listTextColor) previewLabel.set_style(`color: ${listTextColor};`);
         previewLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         contentBox.add_child(previewLabel);
 
@@ -156,7 +153,6 @@ export const ItemRendererMixin = {
                 style_class: 'clipmaster-item-time',
                 y_align: Clutter.ActorAlign.CENTER,
             });
-            if (listTextColor) timeLabel.set_style(`color: ${listTextColor};`);
             bottomRow.add_child(timeLabel);
         }
 
@@ -173,7 +169,6 @@ export const ItemRendererMixin = {
                 track_hover: true,
             });
             const qrIcon = new St.Icon({ icon_name: 'view-grid-symbolic', icon_size: iconSize });
-            if (listTextColor) qrIcon.set_style(`color: ${listTextColor};`);
             qrButton.set_child(qrIcon);
             qrButton._tooltipText = _('QR Code');
             qrButton.connect('notify::hover', btn => this._onButtonHover(btn));
@@ -193,7 +188,6 @@ export const ItemRendererMixin = {
             style_class: 'clipmaster-item-type-label',
             y_align: Clutter.ActorAlign.CENTER,
         });
-        if (listTextColor) typeLabel.set_style(`color: ${listTextColor};`);
         bottomRow.add_child(typeLabel);
 
         // Favorite button
@@ -206,7 +200,8 @@ export const ItemRendererMixin = {
         const favIcon = new St.Icon({
             icon_name: item.isFavorite ? 'starred-symbolic' : 'non-starred-symbolic',
             icon_size: iconSize,
-            style_class: item.isFavorite ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive',
+            // For non-favorite: no special class (match QR icon behavior; inherit from button color)
+            style_class: item.isFavorite ? 'clipmaster-item-fav' : '',
         });
         // Don't apply listTextColor to fav icon - let CSS handle it for better contrast
         favButton.set_child(favIcon);
@@ -227,7 +222,7 @@ export const ItemRendererMixin = {
                 } else {
                     // Just update the icon
                     favIcon.icon_name = newState ? 'starred-symbolic' : 'non-starred-symbolic';
-                    favIcon.style_class = newState ? 'clipmaster-item-fav' : 'clipmaster-item-fav-inactive';
+                    favIcon.style_class = newState ? 'clipmaster-item-fav' : '';
                 }
                 return Clutter.EVENT_STOP;
             }
@@ -271,6 +266,14 @@ export const ItemRendererMixin = {
         this._itemsBox.destroy_all_children();
         this._itemRows = []; // Clear row references
 
+        // Cancel any in-flight incremental render from a previous load
+        if (this._renderItemsSourceId) {
+            try {
+                GLib.source_remove(this._renderItemsSourceId);
+            } catch (_) {}
+            this._renderItemsSourceId = null;
+        }
+
         // If in manage mode, show list management UI
         if (this._manageMode) {
             this._loadManageListsView();
@@ -305,37 +308,38 @@ export const ItemRendererMixin = {
         // Clear row references
         this._itemRows = [];
 
-        this._items.forEach((item, index) => {
-            const row = this._createItemRow(item, index);
-            this._itemsBox.add_child(row);
-            // Store row reference by index for direct access
-            this._itemRows[index] = row;
-            debugLog(() => `_loadItems: index=${index}, row._index=${row._index}, itemRows.length=${this._itemRows.length}`);
-        });
+        // Render items incrementally to reduce UI jank on large lists
+        const items = this._items;
+        const batchSize = 8;
+        let i = 0;
 
-        // Verify itemRows array is continuous
-        const missingIndices = [];
-        for (let i = 0; i < this._items.length; i++) {
-            if (!this._itemRows[i]) {
-                missingIndices.push(i);
-            } else if (this._itemRows[i]._index !== i) {
-                debugLog(() => `_loadItems WARNING: itemRows[${i}]._index=${this._itemRows[i]._index}, expected ${i}`);
+        const addBatch = () => {
+            // If actor got destroyed or replaced mid-render, stop
+            if (!this._itemsBox || typeof this._itemsBox.get_stage === 'function' && this._itemsBox.get_stage() === null) {
+                this._renderItemsSourceId = null;
+                return GLib.SOURCE_REMOVE;
             }
-        }
 
-        if (missingIndices.length > 0)
-            debugLog(() => `_loadItems WARNING: Missing indices in itemRows: ${missingIndices.join(', ')}`);
+            const end = Math.min(i + batchSize, items.length);
+            for (; i < end; i++) {
+                const row = this._createItemRow(items[i], i);
+                this._itemsBox.add_child(row);
+                this._itemRows[i] = row;
+            }
 
-        debugLog(() => {
-            const indices = this._itemRows
-                .map((r, i) => (r ? `${i}:${r._index}` : `${i}:null`))
-                .join(', ');
-            return `_loadItems: Total items=${this._items.length}, itemRows.length=${this._itemRows.length}, itemRows indices: ${indices}`;
-        });
+            if (i >= items.length) {
+                this._renderItemsSourceId = null;
+                if (this._selectedIndex >= 0)
+                    this._updateSelection();
+                return GLib.SOURCE_REMOVE;
+            }
 
-        // Only update selection if there's an active selection (from keyboard navigation)
-        if (this._selectedIndex >= 0)
-            this._updateSelection();
+            return GLib.SOURCE_CONTINUE;
+        };
+
+        // First batch immediately, then continue in idle
+        addBatch();
+        this._renderItemsSourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, addBatch);
     },
 
 };

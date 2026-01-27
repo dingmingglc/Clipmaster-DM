@@ -241,14 +241,20 @@ export class ClipboardMonitor {
         if (this._isStopped) return;
 
         debugLog(`Checking clipboard...`);
-        this._checkForImageWithCallback('CLIPBOARD', (imageFound) => {
-            debugLog(`Image check callback: imageFound=${imageFound}, trackImages=${this._cachedSettings.trackImages}`);
-            if (!imageFound) {
-                this._checkClipboardText();
-            } else {
-                debugLog(`Image found and processed, skipping text check`);
-            }
-        });
+        if (this._cachedSettings?.trackImages) {
+            this._checkForImageWithCallback('CLIPBOARD', (imageFound) => {
+                debugLog(`Image check callback: imageFound=${imageFound}, trackImages=${this._cachedSettings.trackImages}`);
+                if (!imageFound) {
+                    this._checkClipboardText();
+                } else {
+                    debugLog(`Image found and processed, skipping text check`);
+                }
+            });
+            return;
+        }
+
+        // trackImages=false: skip MIME/image checks entirely
+        this._checkClipboardText();
     }
 
     _checkClipboardText() {

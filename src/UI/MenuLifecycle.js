@@ -44,6 +44,40 @@ export const MenuLifecycleMixin = {
     _onMenuOpened() {
         debugLog('Menu opened');
 
+        // Capture DEL globally while menu is open.
+        // Reason: key focus often stays in search entry; relying on actor key-press-event is flaky.
+        if (!this._keyCaptureId) {
+            this._keyCaptureId = global.stage.connect('captured-event', (stage, event) => {
+                try {
+                    if (!this.menu?.isOpen)
+                        return Clutter.EVENT_PROPAGATE;
+
+                    if (event.type?.() !== Clutter.EventType.KEY_PRESS)
+                        return Clutter.EVENT_PROPAGATE;
+
+                    const symbol = event.get_key_symbol?.();
+                    // Some keyboards label "Del" but emit BackSpace; support it when a row is selected.
+                    if (symbol !== Clutter.KEY_Delete && symbol !== Clutter.KEY_KP_Delete && symbol !== Clutter.KEY_BackSpace)
+                        return Clutter.EVENT_PROPAGATE;
+
+                    debugLog(() => `_captured-event: delete pressed (symbol=${symbol}), items.length=${this._items?.length || 0}, selectedIndex=${this._selectedIndex}`);
+
+                    if (this._items?.length > 0 && this._selectedIndex >= 0 && this._selectedIndex < this._items.length) {
+                        const itemId = this._items[this._selectedIndex].id;
+                        debugLog(() => `_captured-event: Deleting item id=${itemId} at index ${this._selectedIndex}`);
+                        this._database.deleteItem(itemId);
+                        this._loadItems();
+                        return Clutter.EVENT_STOP;
+                    }
+
+                    return Clutter.EVENT_PROPAGATE;
+                } catch (e) {
+                    debugLog(() => `_captured-event: error: ${e.message}`);
+                    return Clutter.EVENT_PROPAGATE;
+                }
+            });
+        }
+
         // Cleanup duplicates on first open
         if (!this._duplicatesCleanedUp && this._database) {
             const removed = this._database.cleanupDuplicates();
@@ -139,6 +173,14 @@ export const MenuLifecycleMixin = {
 
     _onMenuClosed() {
         debugLog('Menu closed');
+
+        if (this._keyCaptureId) {
+            try {
+                global.stage.disconnect(this._keyCaptureId);
+            } catch (_) {}
+            this._keyCaptureId = null;
+        }
+
         this._closeContextPanel();
         this._closeQrPanel();
         this._closeListFormPanel();
