@@ -447,48 +447,20 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const symbol = event.get_key_symbol();
             const text = this._searchEntry.get_text();
             
-            // If search is empty and arrow keys are pressed, navigate items
-            if (text.length === 0) {
-                if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up) {
-                    if (this._items.length === 0) return Clutter.EVENT_STOP;
-                    if (this._selectedIndex < 0) {
-                        this._selectedIndex = this._items.length - 1;
-                    } else if (this._selectedIndex > 0) {
-                        this._selectedIndex--;
-                    } else {
-                        this._selectedIndex = this._items.length - 1;
-                    }
-                    this._updateSelection();
-                    this._scrollToSelected();
-                    // Transfer focus to content box to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by content box's key handler
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this._contentBox.grab_key_focus();
-                        return GLib.SOURCE_REMOVE;
-                    });
-                    return Clutter.EVENT_STOP;
-                } else if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
-                    if (this._items.length === 0) return Clutter.EVENT_STOP;
-                    const oldIndex = this._selectedIndex;
-                    if (this._selectedIndex < 0) {
-                        this._selectedIndex = 0;
-                    } else if (this._selectedIndex < this._items.length - 1) {
-                        this._selectedIndex++;
-                    } else {
-                        this._selectedIndex = 0;
-                    }
-                    debugLog(`_searchEntry Down: oldIndex=${oldIndex}, newIndex=${this._selectedIndex}, items.length=${this._items.length}, itemRows.length=${this._itemRows?.length || 0}`);
-                    this._updateSelection();
-                    this._scrollToSelected();
-                    // Transfer focus to content box to enter navigation mode
-                    // This allows subsequent arrow keys to be handled by content box's key handler
-                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                        this._contentBox.grab_key_focus();
-                        return GLib.SOURCE_REMOVE;
-                    });
-                    return Clutter.EVENT_STOP;
-                }
+            // Only handle arrow keys if search is empty
+            // Once we start navigation, let contentBox handle all arrow keys
+            if (text.length === 0 && 
+                (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up ||
+                 symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down)) {
+                
+                // Immediately transfer focus to contentBox so it handles this and future arrow keys
+                this._contentBox.grab_key_focus();
+                
+                // Let contentBox handle the navigation
+                // We return PROPAGATE so the event reaches contentBox's handler
+                return Clutter.EVENT_PROPAGATE;
             }
+            
             return Clutter.EVENT_PROPAGATE;
         });
         
@@ -2072,18 +2044,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _onKeyPress(actor, event) {
         const symbol = event.get_key_symbol();
         
-        // Check if search entry has focus or if event is from search entry
-        // If so, let it handle the event, don't process here
-        const stage = global.stage;
-        const keyFocus = stage.get_key_focus();
-        if (keyFocus === this._searchEntry || 
-            keyFocus === this._searchEntry.clutter_text ||
-            actor === this._searchEntry ||
-            (this._searchEntry.clutter_text && actor === this._searchEntry.clutter_text)) {
-            // Let search entry handle it, don't process here
-            debugLog(`_onKeyPress: Ignoring event from search entry, keyFocus=${keyFocus}, actor=${actor}`);
-            return Clutter.EVENT_PROPAGATE;
-        }
+        // Always handle arrow keys for navigation, regardless of focus
+        // This ensures navigation works even if focus is on search entry (when empty)
 
         if (symbol === Clutter.KEY_Escape) {
             this._isPinned = false;
