@@ -448,17 +448,43 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const text = this._searchEntry.get_text();
             
             // Only handle arrow keys if search is empty
-            // Once we start navigation, let contentBox handle all arrow keys
             if (text.length === 0 && 
                 (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up ||
                  symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down)) {
                 
-                // Immediately transfer focus to contentBox so it handles this and future arrow keys
-                this._contentBox.grab_key_focus();
+                // Handle navigation directly
+                if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
+                    if (this._items.length === 0) return Clutter.EVENT_STOP;
+                    const oldIndex = this._selectedIndex;
+                    if (this._selectedIndex < 0) {
+                        this._selectedIndex = 0;
+                    } else if (this._selectedIndex < this._items.length - 1) {
+                        this._selectedIndex++;
+                    } else {
+                        this._selectedIndex = 0;
+                    }
+                    this._updateSelection();
+                    this._scrollToSelected();
+                } else if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up) {
+                    if (this._items.length === 0) return Clutter.EVENT_STOP;
+                    if (this._selectedIndex < 0) {
+                        this._selectedIndex = this._items.length - 1;
+                    } else if (this._selectedIndex > 0) {
+                        this._selectedIndex--;
+                    } else {
+                        this._selectedIndex = this._items.length - 1;
+                    }
+                    this._updateSelection();
+                    this._scrollToSelected();
+                }
                 
-                // Let contentBox handle the navigation
-                // We return PROPAGATE so the event reaches contentBox's handler
-                return Clutter.EVENT_PROPAGATE;
+                // Transfer focus to contentBox for subsequent arrow keys
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                    this._contentBox.grab_key_focus();
+                    return GLib.SOURCE_REMOVE;
+                });
+                
+                return Clutter.EVENT_STOP;
             }
             
             return Clutter.EVENT_PROPAGATE;
@@ -1060,6 +1086,14 @@ class ClipMasterIndicator extends PanelMenu.Button {
         
         this._isPinned = false;
         this._pinButton.remove_style_pseudo_class('checked');
+        
+        // Set initial focus to contentBox so arrow keys work immediately
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            if (this._contentBox) {
+                this._contentBox.grab_key_focus();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
 
         // Rebuild lists bar (in case lists changed)
         this._buildListsBar();
