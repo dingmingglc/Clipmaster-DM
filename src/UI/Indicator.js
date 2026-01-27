@@ -469,6 +469,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     return Clutter.EVENT_STOP;
                 } else if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
                     if (this._items.length === 0) return Clutter.EVENT_STOP;
+                    const oldIndex = this._selectedIndex;
                     if (this._selectedIndex < 0) {
                         this._selectedIndex = 0;
                     } else if (this._selectedIndex < this._items.length - 1) {
@@ -476,6 +477,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     } else {
                         this._selectedIndex = 0;
                     }
+                    debugLog(`_searchEntry Down: oldIndex=${oldIndex}, newIndex=${this._selectedIndex}, items.length=${this._items.length}, itemRows.length=${this._itemRows?.length || 0}`);
                     this._updateSelection();
                     this._scrollToSelected();
                     // Transfer focus to content box to enter navigation mode
@@ -1295,7 +1297,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._itemsBox.add_child(row);
             // Store row reference by index for direct access
             this._itemRows[index] = row;
+            debugLog(`_loadItems: index=${index}, row._index=${row._index}, itemRows.length=${this._itemRows.length}`);
         });
+        
+        debugLog(`_loadItems: Total items=${this._items.length}, itemRows.length=${this._itemRows.length}, itemRows indices: ${this._itemRows.map((r, i) => r ? `${i}:${r._index}` : `${i}:null`).join(', ')}`);
 
         // Only update selection if there's an active selection (from keyboard navigation)
         if (this._selectedIndex >= 0) {
@@ -1912,6 +1917,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // Then, select the item at _selectedIndex if valid
         if (this._selectedIndex >= 0 && this._itemRows && this._itemRows[this._selectedIndex]) {
             this._itemRows[this._selectedIndex].add_style_class_name('selected');
+            debugLog(`_updateSelection: selectedIndex=${this._selectedIndex}, row._index=${this._itemRows[this._selectedIndex]._index}`);
+        } else if (this._selectedIndex >= 0) {
+            debugLog(`_updateSelection: selectedIndex=${this._selectedIndex} but row not found, itemRows.length=${this._itemRows?.length || 0}`);
         }
     }
 
@@ -1985,6 +1993,14 @@ class ClipMasterIndicator extends PanelMenu.Button {
 
     _onKeyPress(actor, event) {
         const symbol = event.get_key_symbol();
+        
+        // Check if search entry has focus - if so, let it handle the event
+        const stage = global.stage;
+        const keyFocus = stage.get_key_focus();
+        if (keyFocus === this._searchEntry || keyFocus === this._searchEntry.clutter_text) {
+            // Let search entry handle it, don't process here
+            return Clutter.EVENT_PROPAGATE;
+        }
 
         if (symbol === Clutter.KEY_Escape) {
             this._isPinned = false;
@@ -2013,6 +2029,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
             if (this._items.length === 0) return Clutter.EVENT_STOP;
             
+            const oldIndex = this._selectedIndex;
             if (this._selectedIndex < 0) {
                 // First time: select first item
                 this._selectedIndex = 0;
@@ -2022,6 +2039,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 // Already at last item, wrap to first
                 this._selectedIndex = 0;
             }
+            debugLog(`_onKeyPress Down: oldIndex=${oldIndex}, newIndex=${this._selectedIndex}, items.length=${this._items.length}, itemRows.length=${this._itemRows?.length || 0}`);
             this._updateSelection();
             this._scrollToSelected();
             return Clutter.EVENT_STOP;
