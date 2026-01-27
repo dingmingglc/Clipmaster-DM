@@ -3,6 +3,18 @@
 /* ============================================
    Main Popup Window - Follows GNOME HIG
    ============================================ */
+/* PopupMenu outer container (底板) - remove padding and make corners match */
+.popup-menu-boxpointer,
+.popup-menu {
+    padding: 0 !important;
+    border-radius: 12px !important;
+}
+
+.popup-menu-content {
+    padding: 0 !important;
+    border-radius: 12px !important;
+}
+
 .clipmaster-popup {
     background-color: #242424;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -23,6 +35,8 @@
     padding: 6px 12px;
     border-bottom: 1px solid #313244;
     spacing: 8px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .clipmaster-popup.light .clipmaster-header {
@@ -379,7 +393,8 @@
     border-top: 1px solid #313244;
     spacing: 8px;
     background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 0 0 16px 16px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
 .clipmaster-popup.light .clipmaster-footer {
@@ -404,6 +419,12 @@
    ============================================ */
 .clipmaster-indicator-menu {
     min-width: 300px;
+}
+
+/* Menu box container - remove padding and match border radius */
+.clipmaster-menu-box {
+    padding: 0 !important;
+    border-radius: 12px !important;
 }
 
 /* ============================================
