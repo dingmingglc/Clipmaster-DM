@@ -1956,18 +1956,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     
                     debugLog(`_updateSelection: scrolling to row ${this._selectedIndex}, scrollView.height=${this._scrollView.height}, row.height=${selectedRow.height}`);
                     
-                    // 检查 row 是否是 scrollView 的子元素
-                    let isChild = false;
-                    let parent = selectedRow.get_parent();
-                    while (parent) {
-                        if (parent === this._scrollView) {
-                            isChild = true;
-                            break;
-                        }
-                        parent = parent.get_parent();
-                    }
-                    debugLog(`_updateSelection: row is child of scrollView: ${isChild}`);
-                    
                     // 方法1: 使用 AnimationUtils (Clipboard Indicator 方式)
                     if (AnimationUtils && typeof AnimationUtils.ensureActorVisibleInScrollView === 'function') {
                         try {
@@ -1978,37 +1966,70 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         }
                     }
                     
-                    // 方法2: 使用 adjustment 作为备用/补充（同时使用，不只在 AnimationUtils 不可用时）
-                    const adj = this._scrollView.vscroll?.adjustment;
+                    // 方法2: 使用标准的 get_vadjustment() 方法
+                    let adj = null;
+                    try {
+                        // 尝试使用标准方法
+                        if (typeof this._scrollView.get_vadjustment === 'function') {
+                            adj = this._scrollView.get_vadjustment();
+                            debugLog(`_updateSelection: got adjustment via get_vadjustment()`);
+                        } else if (this._scrollView.vscroll?.adjustment) {
+                            adj = this._scrollView.vscroll.adjustment;
+                            debugLog(`_updateSelection: got adjustment via vscroll.adjustment`);
+                        }
+                    } catch (e) {
+                        debugLog(`_updateSelection: error getting adjustment: ${e.message}`);
+                    }
+                    
                     if (adj) {
-                        // 计算位置
-                        let itemTop = 0;
-                        for (let i = 0; i < this._selectedIndex; i++) {
-                            if (this._itemRows[i] && this._itemRows[i].height > 0) {
-                                itemTop += this._itemRows[i].height;
+                        // 使用 get_transformed_position() 获取 actor 在 scrollView 中的实际位置
+                        let itemY = 0;
+                        try {
+                            const [x, y] = selectedRow.get_transformed_position();
+                            const [scrollX, scrollY] = this._scrollView.get_transformed_position();
+                            // 计算相对于 scrollView 的位置
+                            itemY = y - scrollY;
+                            debugLog(`_updateSelection: item transformed position: x=${x}, y=${y}, scrollView y=${scrollY}, relative itemY=${itemY}`);
+                        } catch (e) {
+                            debugLog(`_updateSelection: error getting transformed position, using cumulative height: ${e.message}`);
+                            // 如果 get_transformed_position 失败，使用累积高度
+                            for (let i = 0; i < this._selectedIndex; i++) {
+                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                                    itemY += this._itemRows[i].height;
+                                }
                             }
                         }
+                        
                         const itemHeight = selectedRow.height || 50;
-                        const itemBottom = itemTop + itemHeight;
+                        const itemBottom = itemY + itemHeight;
                         const scrollViewHeight = this._scrollView.height || 300;
                         const currentScroll = adj.value;
                         const visibleTop = currentScroll;
                         const visibleBottom = currentScroll + scrollViewHeight;
                         
-                        debugLog(`_updateSelection: fallback calc - itemTop=${itemTop}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}`);
+                        debugLog(`_updateSelection: calc - itemY=${itemY}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.value=${adj.value}, adj.upper=${adj.upper}, adj.page_size=${adj.page_size}`);
                         
                         // 处理向上和向下滚动
-                        if (itemTop < visibleTop || itemBottom > visibleBottom) {
+                        if (itemY < visibleTop || itemBottom > visibleBottom) {
                             let newScroll = currentScroll;
-                            if (itemTop < visibleTop) {
+                            if (itemY < visibleTop) {
                                 // 向上滚动：项目在可见区域上方
-                                newScroll = Math.max(0, itemTop);
+                                newScroll = Math.max(0, itemY);
                             } else if (itemBottom > visibleBottom) {
                                 // 向下滚动：项目在可见区域下方
                                 newScroll = Math.max(0, itemBottom - scrollViewHeight);
                             }
-                            adj.value = newScroll;
-                            debugLog(`_updateSelection: used fallback scroll, set adj.value to ${adj.value}`);
+                            
+                            // 确保 newScroll 在有效范围内
+                            const maxScroll = Math.max(0, adj.upper - adj.page_size);
+                            newScroll = Math.min(newScroll, maxScroll);
+                            newScroll = Math.max(0, newScroll);
+                            
+                            debugLog(`_updateSelection: setting adj.value from ${adj.value} to ${newScroll}`);
+                            adj.set_value(newScroll);
+                            debugLog(`_updateSelection: adj.value after set_value: ${adj.value}`);
+                        } else {
+                            debugLog(`_updateSelection: item already visible, no scroll needed`);
                         }
                     } else {
                         debugLog(`_updateSelection: no adjustment available`);
