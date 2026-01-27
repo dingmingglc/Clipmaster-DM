@@ -1980,7 +1980,19 @@ class ClipMasterIndicator extends PanelMenu.Button {
             const visibleTop = currentScroll;
             const visibleBottom = currentScroll + scrollViewHeight;
             
-            debugLog(`_scrollToSelected: index=${this._selectedIndex}, itemTop=${itemTop}, itemBottom=${itemBottom}, itemHeight=${itemHeight}, scrollViewHeight=${scrollViewHeight}, currentScroll=${currentScroll}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.upper=${adj.upper}, adj.lower=${adj.lower}`);
+            // Calculate total content height
+            let totalContentHeight = 0;
+            for (let i = 0; i < this._itemRows.length; i++) {
+                if (this._itemRows[i]) {
+                    const alloc = this._itemRows[i].get_allocation_box();
+                    const h = alloc ? alloc.y2 - alloc.y1 : this._itemRows[i].height;
+                    if (h > 0) {
+                        totalContentHeight += h;
+                    }
+                }
+            }
+            
+            console.log(`[ClipMaster] _scrollToSelected: index=${this._selectedIndex}, itemTop=${itemTop}, itemBottom=${itemBottom}, itemHeight=${itemHeight}, scrollViewHeight=${scrollViewHeight}, currentScroll=${currentScroll}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.upper=${adj.upper}, totalContentHeight=${totalContentHeight}, itemsBox.height=${this._itemsBox.height}`);
             
             // Small threshold to handle edge cases (1 pixel)
             const threshold = 1;
@@ -2011,16 +2023,31 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     newScrollValue = maxScroll;
                 }
                 
-                debugLog(`_scrollToSelected: Setting adj.value from ${adj.value} to ${newScrollValue}`);
+                console.log(`[ClipMaster] _scrollToSelected: Setting adj.value from ${adj.value} to ${newScrollValue}, adj.upper=${adj.upper}, scrollViewHeight=${scrollViewHeight}`);
                 
-                // Directly set the value - this should work in St.ScrollView
+                // Try multiple methods to ensure scrolling works
+                // Method 1: Direct assignment
                 adj.value = newScrollValue;
                 
-                // Force update by accessing the value again
+                // Method 2: Use set_value if available
+                if (typeof adj.set_value === 'function') {
+                    adj.set_value(newScrollValue);
+                }
+                
+                // Method 3: Force update by setting again after a micro-delay
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 0, () => {
+                    if (adj.value !== newScrollValue) {
+                        adj.value = newScrollValue;
+                        console.log(`[ClipMaster] _scrollToSelected: Forced adj.value to ${newScrollValue}, current value is ${adj.value}`);
+                    }
+                    return GLib.SOURCE_REMOVE;
+                });
+                
+                // Verify the value was set
                 const verifyValue = adj.value;
-                debugLog(`_scrollToSelected: Verified adj.value is now ${verifyValue}`);
+                console.log(`[ClipMaster] _scrollToSelected: Verified adj.value is now ${verifyValue}`);
             } else {
-                debugLog(`_scrollToSelected: No scroll needed, item is visible`);
+                console.log(`[ClipMaster] _scrollToSelected: No scroll needed, item is visible`);
             }
             
             return GLib.SOURCE_REMOVE;
