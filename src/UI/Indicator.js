@@ -1945,11 +1945,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
             return;
         }
         
-        const adj = this._scrollView.vscroll.adjustment;
-        if (!adj) {
-            return;
-        }
-        
         // Use a timeout to ensure layout is complete
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             try {
@@ -1968,7 +1963,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 const itemHeight = selected.height;
                 const itemBottom = itemTop + itemHeight;
                 const scrollViewHeight = this._scrollView.height;
-                const currentScroll = adj.value;
+                
+                // Get current scroll position from adjustment
+                const adj = this._scrollView.vscroll?.adjustment;
+                const currentScroll = adj ? adj.value : 0;
+                
                 const visibleTop = currentScroll;
                 const visibleBottom = currentScroll + scrollViewHeight;
                 
@@ -1987,38 +1986,32 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     needsScroll = true;
                 }
                 
-                if (needsScroll) {
-                    // Try using ensure_visible if available
-                    if (typeof selected.ensure_visible === 'function') {
-                        selected.ensure_visible();
-                    } else {
-                        // Ensure adjustment bounds are correct
-                        const itemsBoxHeight = this._itemsBox.height;
-                        if (itemsBoxHeight > 0) {
-                            // Update upper bound if needed
-                            if (typeof adj.set_upper === 'function') {
-                                if (adj.upper < itemsBoxHeight) {
-                                    adj.set_upper(itemsBoxHeight);
-                                }
-                            } else if (adj.upper < itemsBoxHeight) {
-                                adj.upper = itemsBoxHeight;
-                            }
+                if (needsScroll && adj) {
+                    // Ensure adjustment bounds are correct
+                    const itemsBoxHeight = this._itemsBox.height;
+                    if (itemsBoxHeight > 0) {
+                        if (adj.upper < itemsBoxHeight) {
+                            adj.upper = itemsBoxHeight;
                         }
-                        
-                        // Clamp the scroll value
-                        const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
-                        newScrollValue = Math.min(newScrollValue, maxScroll);
-                        newScrollValue = Math.max(0, newScrollValue);
-                        
-                        // Set the scroll value using set_value if available
-                        if (typeof adj.set_value === 'function') {
-                            adj.set_value(newScrollValue);
+                    }
+                    
+                    // Clamp the scroll value
+                    const maxScroll = Math.max(0, adj.upper - scrollViewHeight);
+                    newScrollValue = Math.min(newScrollValue, maxScroll);
+                    newScrollValue = Math.max(0, newScrollValue);
+                    
+                    // Try using ease animation if available, otherwise set directly
+                    if (typeof adj.ease === 'function') {
+                        const currentValue = adj.value;
+                        if (Math.abs(newScrollValue - currentValue) > 0.1) {
+                            const mode = Clutter.AnimationMode.EASE_OUT_CUBIC;
+                            adj.ease(newScrollValue, 150, mode);
                         } else {
                             adj.value = newScrollValue;
                         }
-                        
-                        // Force update
-                        this._scrollView.vscroll.adjustment_changed();
+                    } else {
+                        // Direct assignment
+                        adj.value = newScrollValue;
                     }
                 }
             } catch (e) {
