@@ -99,10 +99,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
         menuItem.add_child(this._contentBox);
         this.menu.addMenuItem(menuItem);
         
-        // Clear hover and selected state when mouse leaves the entire menu (not just content area)
+        // Clear hover state when mouse leaves the entire menu (not just content area)
         this.menu.actor.connect('leave-event', () => {
             this._clearAllHoverStates();
-            this._clearSelection();
+            // Removed: no longer clear selected on mouse leave (selected is only for keyboard navigation)
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -1117,8 +1117,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._tooltip.visible = false;
         }
         
-        // Clear hover and selected state from all items when menu closes
+        // Clear hover state from all items when menu closes
         this._clearAllHoverStates();
+        // Clear selected state (from keyboard navigation) when menu closes
         this._clearSelection();
     }
 
@@ -1275,13 +1276,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // Click handler
         row.connect('button-press-event', (actor, event) => {
             if (event.get_button() === 1) {
-                this._selectedIndex = index;
-                this._updateSelection();
-                this._pasteSelected();
+                // Paste directly without setting selected state
+                this._pasteItem(item);
                 return Clutter.EVENT_STOP;
             } else if (event.get_button() === 3) {
-                this._selectedIndex = index;
-                this._updateSelection();
+                // Removed: no longer set selected on right-click
                 this._showContextMenu(item, row);
                 return Clutter.EVENT_STOP;
             }
@@ -1296,17 +1295,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
             if (this._qrPanelRow && this._qrPanelRow !== row) {
                 this._closeQrPanel();
             }
-            this._selectedIndex = index;
-            this._updateSelection();
-        });
-        
-        // Clear selected when mouse leaves the row (but still in menu)
-        row.connect('leave-event', () => {
-            // Only clear if mouse is still within the menu
-            if (this.menu.isOpen && this._selectedIndex === index) {
-                this._clearSelection();
-            }
-            return Clutter.EVENT_PROPAGATE;
+            // Removed: no longer set selected on mouse hover
         });
 
         // Number label (show for all items)
@@ -1877,12 +1866,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
     }
 
-    _pasteSelected(fromHover = false) {
-        if (this._selectedIndex < 0 || this._selectedIndex >= this._items.length) {
-            return;
-        }
-
-        const item = this._items[this._selectedIndex];
+    _pasteItem(item, fromHover = false) {
+        if (!item) return;
 
         if (item.type === ItemType.IMAGE && item.content) {
             this._monitor.copyImageToClipboard(item.content);
@@ -1918,6 +1903,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
                 }, 'paste-on-select');
             }
         }
+    }
+
+    _pasteSelected(fromHover = false) {
+        if (this._selectedIndex < 0 || this._selectedIndex >= this._items.length) {
+            return;
+        }
+
+        const item = this._items[this._selectedIndex];
+        this._pasteItem(item, fromHover);
     }
 
     _onKeyPress(actor, event) {
