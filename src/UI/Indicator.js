@@ -99,8 +99,8 @@ class ClipMasterIndicator extends PanelMenu.Button {
         menuItem.add_child(this._contentBox);
         this.menu.addMenuItem(menuItem);
         
-        // Clear hover state when mouse leaves the main content area
-        this._contentBox.connect('leave-event', () => {
+        // Clear hover state when mouse leaves the entire menu (not just content area)
+        this.menu.actor.connect('leave-event', () => {
             this._clearAllHoverStates();
             return Clutter.EVENT_PROPAGATE;
         });
