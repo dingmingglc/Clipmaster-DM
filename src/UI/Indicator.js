@@ -1300,6 +1300,18 @@ class ClipMasterIndicator extends PanelMenu.Button {
             debugLog(`_loadItems: index=${index}, row._index=${row._index}, itemRows.length=${this._itemRows.length}`);
         });
         
+        // Verify itemRows array is continuous
+        const missingIndices = [];
+        for (let i = 0; i < this._items.length; i++) {
+            if (!this._itemRows[i]) {
+                missingIndices.push(i);
+            } else if (this._itemRows[i]._index !== i) {
+                debugLog(`_loadItems WARNING: itemRows[${i}]._index=${this._itemRows[i]._index}, expected ${i}`);
+            }
+        }
+        if (missingIndices.length > 0) {
+            debugLog(`_loadItems WARNING: Missing indices in itemRows: ${missingIndices.join(', ')}`);
+        }
         debugLog(`_loadItems: Total items=${this._items.length}, itemRows.length=${this._itemRows.length}, itemRows indices: ${this._itemRows.map((r, i) => r ? `${i}:${r._index}` : `${i}:null`).join(', ')}`);
 
         // Only update selection if there's an active selection (from keyboard navigation)
@@ -1994,11 +2006,16 @@ class ClipMasterIndicator extends PanelMenu.Button {
     _onKeyPress(actor, event) {
         const symbol = event.get_key_symbol();
         
-        // Check if search entry has focus - if so, let it handle the event
+        // Check if search entry has focus or if event is from search entry
+        // If so, let it handle the event, don't process here
         const stage = global.stage;
         const keyFocus = stage.get_key_focus();
-        if (keyFocus === this._searchEntry || keyFocus === this._searchEntry.clutter_text) {
+        if (keyFocus === this._searchEntry || 
+            keyFocus === this._searchEntry.clutter_text ||
+            actor === this._searchEntry ||
+            (this._searchEntry.clutter_text && actor === this._searchEntry.clutter_text)) {
             // Let search entry handle it, don't process here
+            debugLog(`_onKeyPress: Ignoring event from search entry, keyFocus=${keyFocus}, actor=${actor}`);
             return Clutter.EVENT_PROPAGATE;
         }
 
