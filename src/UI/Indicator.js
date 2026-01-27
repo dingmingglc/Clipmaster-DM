@@ -1299,6 +1299,15 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._selectedIndex = index;
             this._updateSelection();
         });
+        
+        // Clear selected when mouse leaves the row (but still in menu)
+        row.connect('leave-event', () => {
+            // Only clear if mouse is still within the menu
+            if (this.menu.isOpen && this._selectedIndex === index) {
+                this._clearSelection();
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
 
         // Number label (show for all items)
         const numLabel = new St.Label({
