@@ -1270,18 +1270,13 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._updateSelection();
         });
 
-        // Number label (1-9)
-        if (index < 9) {
-            const numLabel = new St.Label({
-                text: (index + 1).toString(),
-                style_class: 'clipmaster-item-number'
-            });
-            if (listTextColor) numLabel.set_style(`color: ${listTextColor};`);
-            row.add_child(numLabel);
-        } else {
-            const spacer = new St.Widget({ width: 24 });
-            row.add_child(spacer);
-        }
+        // Number label (show for all items)
+        const numLabel = new St.Label({
+            text: (index + 1).toString(),
+            style_class: 'clipmaster-item-number'
+        });
+        if (listTextColor) numLabel.set_style(`color: ${listTextColor};`);
+        row.add_child(numLabel);
 
         // Content box
         const contentBox = new St.BoxLayout({
