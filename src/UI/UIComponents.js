@@ -7,6 +7,9 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+
 import { ItemType, debugLog } from '../Util/Constants.js';
 import { tr as _ } from '../Util/Translations.js';
 
@@ -15,6 +18,97 @@ import { tr as _ } from '../Util/Translations.js';
  * These methods will be mixed into ClipMasterIndicator class
  */
 export const UIComponentsMixin = {
+    _initSearchHistory() {
+        if (!this._searchHistory)
+            this._searchHistory = [];
+        if (!this._searchHistoryMax)
+            this._searchHistoryMax = 20;
+        if (this._searchHistoryActiveIndex === undefined)
+            this._searchHistoryActiveIndex = -1;
+    },
+
+    _addToSearchHistory(query) {
+        this._initSearchHistory();
+        const q = String(query ?? '').trim();
+        if (!q)
+            return;
+
+        // Deduplicate and move to front
+        this._searchHistory = this._searchHistory.filter(x => x !== q);
+        this._searchHistory.unshift(q);
+        if (this._searchHistory.length > this._searchHistoryMax)
+            this._searchHistory.length = this._searchHistoryMax;
+
+        this._refreshSearchHistoryMenu();
+    },
+
+    _refreshSearchHistoryMenu() {
+        if (!this._searchHistoryMenu)
+            return;
+
+        this._searchHistoryMenu.removeAll();
+        this._searchHistoryActiveIndex = -1;
+
+        const history = this._searchHistory || [];
+        if (history.length === 0) {
+            const empty = new PopupMenu.PopupMenuItem(_('No history'), { reactive: false, can_focus: false });
+            this._searchHistoryMenu.addMenuItem(empty);
+        } else {
+            history.forEach((text, idx) => {
+                const item = new PopupMenu.PopupMenuItem(text);
+                item.connect('activate', () => {
+                    this._searchEntry.set_text(text);
+                    this._searchQuery = text;
+                    this._loadItems();
+                    this._searchEntry.grab_key_focus();
+                    this._searchHistoryMenu.close();
+                });
+                this._searchHistoryMenu.addMenuItem(item);
+            });
+
+            this._searchHistoryMenu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+            const clearItem = new PopupMenu.PopupMenuItem(_('Clear history'));
+            clearItem.connect('activate', () => {
+                this._searchHistory = [];
+                this._refreshSearchHistoryMenu();
+            });
+            this._searchHistoryMenu.addMenuItem(clearItem);
+        }
+    },
+
+    _toggleSearchHistoryMenu() {
+        if (!this._searchHistoryMenu)
+            return;
+
+        if (this._searchHistoryMenu.isOpen) {
+            this._searchHistoryMenu.close();
+        } else {
+            this._refreshSearchHistoryMenu();
+            this._searchHistoryMenu.open();
+        }
+    },
+
+    _cycleSearchHistory(delta) {
+        this._initSearchHistory();
+        const history = this._searchHistory || [];
+        if (history.length === 0)
+            return;
+
+        if (!this._searchHistoryMenu?.isOpen)
+            this._toggleSearchHistoryMenu();
+
+        if (this._searchHistoryActiveIndex < 0)
+            this._searchHistoryActiveIndex = 0;
+        else
+            this._searchHistoryActiveIndex = (this._searchHistoryActiveIndex + delta + history.length) % history.length;
+
+        const text = history[this._searchHistoryActiveIndex];
+        this._searchEntry.set_text(text);
+        this._searchQuery = text;
+        this._loadItems();
+        this._searchEntry.grab_key_focus();
+    },
+
     _buildHeader() {
         this._header = new St.BoxLayout({
             style_class: 'clipmaster-header',
@@ -139,6 +233,13 @@ export const UIComponentsMixin = {
     },
 
     _buildSearchBar() {
+        this._initSearchHistory();
+
+        this._searchRow = new St.BoxLayout({
+            style_class: 'clipmaster-search-row',
+            x_expand: true,
+        });
+
         this._searchEntry = new St.Entry({
             style_class: 'clipmaster-search',
             hint_text: _('Search...'),
@@ -151,6 +252,26 @@ export const UIComponentsMixin = {
         });
         this._searchEntry.clutter_text.connect('activate', () => {
             this._pasteSelected();
+        });
+
+        // Search history button (dropdown)
+        this._searchHistoryButton = new St.Button({
+            style_class: 'clipmaster-search-history-button',
+            can_focus: false,
+            track_hover: true,
+            child: new St.Icon({ icon_name: 'document-open-recent-symbolic', icon_size: 16 }),
+        });
+        this._searchHistoryButton._tooltipText = _('Search history');
+        this._searchHistoryButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
+
+        this._searchHistoryMenu = new PopupMenu.PopupMenu(this._searchHistoryButton, 0.5, St.Side.TOP);
+        this._searchHistoryMenu.actor.add_style_class_name('clipmaster-search-history-menu');
+        Main.uiGroup.add_child(this._searchHistoryMenu.actor);
+        this._searchHistoryMenu.actor.hide();
+
+        this._searchHistoryButton.connect('clicked', () => {
+            this._toggleSearchHistoryMenu();
+            return Clutter.EVENT_STOP;
         });
 
         // Handle keys in the actual text actor (this is what receives key focus)
@@ -215,7 +336,9 @@ export const UIComponentsMixin = {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        this._contentBox.add_child(this._searchEntry);
+        this._searchRow.add_child(this._searchEntry);
+        this._searchRow.add_child(this._searchHistoryButton);
+        this._contentBox.add_child(this._searchRow);
     },
 
     _buildFilterBar() {

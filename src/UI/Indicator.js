@@ -152,6 +152,35 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._closeContextPanel();
         this._closeQrPanel();
 
+        // Safety: disconnect global key capture if menu is destroyed while open
+        if (this._keyCaptureId) {
+            try {
+                global.stage.disconnect(this._keyCaptureId);
+            } catch (_) {}
+            this._keyCaptureId = null;
+        }
+
+        // Stop any incremental item rendering still scheduled
+        if (this._renderItemsSourceId) {
+            try {
+                GLib.source_remove(this._renderItemsSourceId);
+            } catch (_) {}
+            this._renderItemsSourceId = null;
+        }
+
+        // Destroy search-history popup menu actor (added to Main.uiGroup)
+        if (this._searchHistoryMenu) {
+            try {
+                if (this._searchHistoryMenu.isOpen)
+                    this._searchHistoryMenu.close();
+                const actor = this._searchHistoryMenu.actor;
+                if (actor?.get_parent?.())
+                    actor.get_parent().remove_child(actor);
+                this._searchHistoryMenu.destroy();
+            } catch (_) {}
+            this._searchHistoryMenu = null;
+        }
+
         if (this._tooltip && this._tooltip.get_parent()) {
             this._tooltip.get_parent().remove_child(this._tooltip);
             this._tooltip.destroy();

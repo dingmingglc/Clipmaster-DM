@@ -22,6 +22,10 @@ import { initTranslations } from './src/Util/Translations.js';
 
 export default class ClipMasterCustomExtension extends Extension {
     enable() {
+        this._doEnableNow();
+    }
+
+    _doEnableNow() {
         this._settings = this.getSettings();
         this._extensionPath = this.path;
         this._signalManager = new SignalManager();

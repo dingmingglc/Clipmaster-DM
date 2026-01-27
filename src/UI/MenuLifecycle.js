@@ -44,8 +44,9 @@ export const MenuLifecycleMixin = {
     _onMenuOpened() {
         debugLog('Menu opened');
 
-        // Capture DEL globally while menu is open.
-        // Reason: key focus often stays in search entry; relying on actor key-press-event is flaky.
+        // Capture keys globally while menu is open.
+        // Strategy B: always use Up/Down for list navigation, independent of search input focus.
+        // Also handle Delete globally for reliability.
         if (!this._keyCaptureId) {
             this._keyCaptureId = global.stage.connect('captured-event', (stage, event) => {
                 try {
@@ -56,8 +57,50 @@ export const MenuLifecycleMixin = {
                         return Clutter.EVENT_PROPAGATE;
 
                     const symbol = event.get_key_symbol?.();
+                    const state = event.get_state?.() ?? 0;
+                    const ctrl = (state & Clutter.ModifierType.CONTROL_MASK) !== 0;
+
+                    // Ctrl shortcuts for search history (doesn't consume Up/Down)
+                    if (ctrl && (symbol === Clutter.KEY_r || symbol === Clutter.KEY_R)) {
+                        this._toggleSearchHistoryMenu?.();
+                        return Clutter.EVENT_STOP;
+                    }
+                    if (ctrl && (symbol === Clutter.KEY_j || symbol === Clutter.KEY_J)) {
+                        this._cycleSearchHistory?.(1);
+                        return Clutter.EVENT_STOP;
+                    }
+                    if (ctrl && (symbol === Clutter.KEY_k || symbol === Clutter.KEY_K)) {
+                        this._cycleSearchHistory?.(-1);
+                        return Clutter.EVENT_STOP;
+                    }
+
+                    // Up/Down always navigate list (strategy B)
+                    if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up) {
+                        if (this._items?.length > 0) {
+                            if (this._selectedIndex < 0) this._selectedIndex = this._items.length - 1;
+                            else if (this._selectedIndex > 0) this._selectedIndex--;
+                            else this._selectedIndex = this._items.length - 1;
+                            this._updateSelection?.();
+                        }
+                        return Clutter.EVENT_STOP;
+                    }
+                    if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
+                        if (this._items?.length > 0) {
+                            if (this._selectedIndex < 0) this._selectedIndex = 0;
+                            else if (this._selectedIndex < this._items.length - 1) this._selectedIndex++;
+                            else this._selectedIndex = 0;
+                            this._updateSelection?.();
+                        }
+                        return Clutter.EVENT_STOP;
+                    }
+
+                    // Delete selected item
                     // Some keyboards label "Del" but emit BackSpace; support it when a row is selected.
-                    if (symbol !== Clutter.KEY_Delete && symbol !== Clutter.KEY_KP_Delete && symbol !== Clutter.KEY_BackSpace)
+                    const isDeleteKey =
+                        symbol === Clutter.KEY_Delete ||
+                        symbol === Clutter.KEY_KP_Delete ||
+                        symbol === Clutter.KEY_BackSpace;
+                    if (!isDeleteKey)
                         return Clutter.EVENT_PROPAGATE;
 
                     debugLog(() => `_captured-event: delete pressed (symbol=${symbol}), items.length=${this._items?.length || 0}, selectedIndex=${this._selectedIndex}`);
@@ -180,6 +223,14 @@ export const MenuLifecycleMixin = {
             } catch (_) {}
             this._keyCaptureId = null;
         }
+
+        if (this._searchHistoryMenu?.isOpen)
+            this._searchHistoryMenu.close();
+
+        // Store current query into history (session-only)
+        try {
+            this._addToSearchHistory?.(this._searchEntry?.get_text?.() ?? '');
+        } catch (_) {}
 
         this._closeContextPanel();
         this._closeQrPanel();

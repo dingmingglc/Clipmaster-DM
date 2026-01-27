@@ -112,8 +112,13 @@
 }
 
 /* Search Bar */
-.clipmaster-search {
+.clipmaster-search-row {
     margin: 4px 12px 8px 12px;
+    spacing: 8px;
+}
+
+.clipmaster-search {
+    margin: 0;
     padding: 8px 12px;
     border-radius: 8px;
     background-color: #313244;
@@ -152,6 +157,32 @@
 
 .clipmaster-popup.light .clipmaster-search:hover {
     background-color: #dce0e8;
+}
+
+.clipmaster-search-history-button {
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 6px;
+    color: #a6adc8;
+}
+
+.clipmaster-popup.light .clipmaster-search-history-button {
+    color: #6c6f85;
+}
+
+.clipmaster-search-history-button:hover {
+    background-color: #313244;
+}
+
+.clipmaster-popup.light .clipmaster-search-history-button:hover {
+    background-color: #ccd0da;
+}
+
+.clipmaster-search-history-menu {
+    /* Keep it consistent with other dropdowns */
+    padding: 6px;
+    border-radius: 8px;
 }
 
 /* Filter Bar */

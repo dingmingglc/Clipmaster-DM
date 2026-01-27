@@ -183,8 +183,16 @@ export const ItemRendererMixin = {
         }
 
         // Type label [Text], [Code], etc.
+        let listName = null;
+        if (item.listId) {
+            const list = this._database.getListById(item.listId);
+            listName = list?.name ? String(list.name) : null;
+        }
+
         const typeLabel = new St.Label({
-            text: `[${this._getTypeLabel(item.type)}]`,
+            text: listName
+                ? `[${this._getTypeLabel(item.type)}] [${listName}]`
+                : `[${this._getTypeLabel(item.type)}]`,
             style_class: 'clipmaster-item-type-label',
             y_align: Clutter.ActorAlign.CENTER,
         });
