@@ -1940,26 +1940,25 @@ class ClipMasterIndicator extends PanelMenu.Button {
             
             // Transfer focus to the selected row (Clipboard Indicator way)
             // This will trigger key-focus-in event, which will auto-scroll
+            // Also directly call ensureActorVisibleInScrollView as a fallback
             // Use a small delay to ensure layout is complete
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
                 try {
-                    if (selectedRow && !selectedRow.is_destroyed()) {
-                        // Check if focus is already on this row
+                    if (selectedRow && !selectedRow.is_destroyed() && this._scrollView) {
+                        // Always try to scroll first (this is the main goal)
+                        AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
+                        debugLog(`_updateSelection: scrolled to row ${this._selectedIndex}`);
+                        
+                        // Then try to transfer focus (this will trigger key-focus-in as a bonus)
                         const stage = global.stage;
                         const currentFocus = stage.get_key_focus();
                         if (currentFocus !== selectedRow) {
                             selectedRow.grab_key_focus();
                             debugLog(`_updateSelection: transferred focus to row ${this._selectedIndex}`);
-                        } else {
-                            debugLog(`_updateSelection: focus already on row ${this._selectedIndex}, triggering scroll manually`);
-                            // If focus is already on this row, manually trigger scroll
-                            if (this._scrollView) {
-                                AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, selectedRow);
-                            }
                         }
                     }
                 } catch (e) {
-                    debugLog(`_updateSelection: grab_key_focus error: ${e.message}`);
+                    debugLog(`_updateSelection: error: ${e.message}`);
                 }
                 return GLib.SOURCE_REMOVE;
             });
