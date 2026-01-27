@@ -6,7 +6,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { TimeoutManager, FileUtils, HashUtils } from '../Util/Utils.js';
 import { ItemType, debugLog } from '../Util/Constants.js';
@@ -329,28 +329,34 @@ export class ClipboardDatabase {
         const contentHash = HashUtils.hashContent(combinedContent);
 
         // Check both main items and pending items for duplicates
+        // Optimize: reuse existing hash if available instead of recalculating
         const existing = this._items.find(i => {
+            // Prefer using cached hash if available
+            if (i.contentHash === contentHash || i.hash === contentHash) {
+                return true;
+            }
+            // Only calculate if not cached
             const iCombined = (i.title || '') + '||' + (i.content || '');
-            const iHash = HashUtils.hashContent(iCombined);
-            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
+            return HashUtils.hashContent(iCombined) === contentHash;
         }) || this._pendingItems.find(i => {
+            // Prefer using cached hash if available
+            if (i.contentHash === contentHash || i.hash === contentHash) {
+                return true;
+            }
+            // Only calculate if not cached
             const iCombined = (i.title || '') + '||' + (i.content || '');
-            const iHash = HashUtils.hashContent(iCombined);
-            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
+            return HashUtils.hashContent(iCombined) === contentHash;
         });
 
-        let skipDuplicates = true;
-        if (this._settings) {
-            skipDuplicates = this._settings.get_boolean('skip-duplicates');
-            debugLog(`skip-duplicates setting = ${skipDuplicates}`);
-        }
+        const skipDuplicates = this._settings?.get_boolean('skip-duplicates') ?? true;
+        debugLog(`skip-duplicates setting = ${skipDuplicates}`);
 
         debugLog(`existing=${!!existing}, skipDuplicates=${skipDuplicates}`);
 
         if (existing && skipDuplicates) {
             debugLog(`Skipping duplicate, updating existing item`);
             existing.lastUsed = Date.now();
-            existing.useCount = (existing.useCount || 1) + 1;
+            existing.useCount = (existing.useCount ?? 0) + 1;
 
             // Only move to top if it's already in _items (main list)
             if (this._items.includes(existing)) {

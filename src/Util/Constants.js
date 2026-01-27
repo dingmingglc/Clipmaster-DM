@@ -16,11 +16,15 @@ export const ItemType = {
 export let _debugMode = false;
 
 export function debugLog(message) {
-    if (_debugMode) {
-        // Use console.log instead of console.debug so messages reliably
-        // appear in journalctl for GNOME Shell sessions.
-        console.log(`ClipMaster DEBUG: ${message}`);
-    }
+    if (!_debugMode)
+        return;
+
+    // Support lazy messages: debugLog(() => `expensive ${compute()}`)
+    const msg = typeof message === 'function' ? message() : message;
+
+    // Use console.log instead of console.debug so messages reliably
+    // appear in journalctl for GNOME Shell sessions.
+    console.log(`ClipMaster DEBUG: ${msg}`);
 }
 
 export function setDebugMode(enabled) {
