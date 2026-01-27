@@ -17,7 +17,9 @@ export let _debugMode = false;
 
 export function debugLog(message) {
     if (_debugMode) {
-        console.debug(`ClipMaster DEBUG: ${message}`);
+        // Use console.log instead of console.debug so messages reliably
+        // appear in journalctl for GNOME Shell sessions.
+        console.log(`ClipMaster DEBUG: ${message}`);
     }
 }
 
@@ -25,6 +27,8 @@ export function setDebugMode(enabled) {
     _debugMode = enabled;
     if (enabled) {
         console.log('ClipMaster: Debug mode ENABLED');
+    } else {
+        console.log('ClipMaster: Debug mode DISABLED');
     }
 }
 

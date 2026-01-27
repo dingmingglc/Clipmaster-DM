@@ -1031,7 +1031,9 @@ class ClipMasterIndicator extends PanelMenu.Button {
             x_expand: true
         });
 
-        this._scrollView.add_child(this._itemsBox);
+        // St.ScrollView is a single-child container; use set_child so the
+        // scrollable wiring (adjustments) is done via the proper API.
+        this._scrollView.set_child(this._itemsBox);
         this._contentBox.add_child(this._scrollView);
     }
 
@@ -1328,7 +1330,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // This is the Clipboard Indicator way: when focus moves to an item, scroll to make it visible
         row.connect('key-focus-in', () => {
             debugLog(`key-focus-in triggered for row index ${row._index}`);
-            if (this._scrollView && row && !row.is_destroyed()) {
+            const rowDestroyed =
+                typeof row?.is_destroyed === 'function'
+                    ? row.is_destroyed()
+                    : (row?.get_stage?.() === null);
+
+            if (this._scrollView && row && !rowDestroyed) {
                 try {
                     AnimationUtils.ensureActorVisibleInScrollView(this._scrollView, row);
                     debugLog(`key-focus-in: scrolled to row index ${row._index}`);
@@ -1944,7 +1951,12 @@ class ClipMasterIndicator extends PanelMenu.Button {
             // Use multiple delays to ensure layout is complete and scrolling works
             const scrollToRow = () => {
                 try {
-                    if (!selectedRow || selectedRow.is_destroyed() || !this._scrollView) {
+                    const rowDestroyed =
+                        typeof selectedRow?.is_destroyed === 'function'
+                            ? selectedRow.is_destroyed()
+                            : (selectedRow?.get_stage?.() === null);
+
+                    if (!selectedRow || rowDestroyed || !this._scrollView) {
                         debugLog(`_updateSelection: scrollToRow - invalid state`);
                         return;
                     }
@@ -1982,31 +1994,41 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     
                     if (adj) {
-                        // 首先，计算 itemsBox 的总高度（所有行的累积高度）
-                        let itemsBoxHeight = 0;
-                        if (this._itemRows && this._itemRows.length > 0) {
-                            for (let i = 0; i < this._itemRows.length; i++) {
-                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
-                                    itemsBoxHeight += this._itemRows[i].height;
-                                }
+                        // IMPORTANT: per St.Scrollable contract, upper/page_size are set by the
+                        // scrollable child during allocation; we should not override them here.
+                        // Also: always prefer the child (itemsBox) vadjustment for scrolling.
+
+                        // NOTE: In some GNOME/GJS versions, StScrollable.get_adjustments()
+                        // is not callable without out-args from JS (will throw).
+                        // Use the St.Scrollable 'vadjustment' property directly instead.
+                        const childAdj = this._itemsBox?.vadjustment ?? null;
+                        if (childAdj)
+                            debugLog(`_updateSelection: got child vadjustment via itemsBox.vadjustment`);
+
+                        const useAdj = childAdj || adj;
+
+                        const getAdjValue = () => {
+                            try {
+                                if (useAdj && typeof useAdj.get_value === 'function')
+                                    return useAdj.get_value();
+                            } catch (_) {}
+                            return useAdj?.value ?? 0;
+                        };
+
+                        const setAdjValue = (v) => {
+                            if (!useAdj) return;
+                            if (typeof useAdj.set_value === 'function') {
+                                useAdj.set_value(v);
+                            } else {
+                                useAdj.value = v;
                             }
-                        }
-                        // 如果累积高度为0，使用 itemsBox 的实际高度
-                        if (itemsBoxHeight === 0 && this._itemsBox && this._itemsBox.height > 0) {
-                            itemsBoxHeight = this._itemsBox.height;
-                        }
-                        
-                        // 获取 scrollView 的可见高度
-                        const scrollViewHeight = this._scrollView.height || 300;
-                        
-                        // 更新 adjustment 的 upper 和 page_size
-                        if (itemsBoxHeight > 0) {
-                            adj.upper = itemsBoxHeight;
-                            adj.page_size = scrollViewHeight;
-                            debugLog(`_updateSelection: updated adj.upper=${adj.upper}, adj.page_size=${adj.page_size}, itemsBoxHeight=${itemsBoxHeight}, scrollViewHeight=${scrollViewHeight}`);
-                        }
-                        
-                        // 直接使用累积高度计算位置（更可靠的方法）
+                        };
+
+                        const lower = useAdj?.lower ?? 0;
+                        const upper = useAdj?.upper ?? 0;
+                        const pageSize = useAdj?.page_size ?? (this._scrollView.height || 300);
+
+                        // 直接使用累积高度计算 itemY（scroll coordinates）
                         let itemY = 0;
                         for (let i = 0; i < this._selectedIndex; i++) {
                             if (this._itemRows[i] && this._itemRows[i].height > 0) {
@@ -2016,33 +2038,31 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         
                         const itemHeight = selectedRow.height || 50;
                         const itemBottom = itemY + itemHeight;
-                        const currentScroll = adj.value;
+                        const currentScroll = getAdjValue();
                         const visibleTop = currentScroll;
-                        const visibleBottom = currentScroll + scrollViewHeight;
+                        const visibleBottom = currentScroll + pageSize;
                         
-                        debugLog(`_updateSelection: calc - itemY=${itemY}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, adj.value=${adj.value}, adj.upper=${adj.upper}, adj.page_size=${adj.page_size}, adj.lower=${adj.lower}`);
+                        debugLog(`_updateSelection: calc - itemY=${itemY}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, value=${currentScroll}, upper=${upper}, page_size=${pageSize}, lower=${lower}`);
                         
                         // 处理向上和向下滚动
                         if (itemY < visibleTop || itemBottom > visibleBottom) {
                             let newScroll = currentScroll;
                             if (itemY < visibleTop) {
                                 // 向上滚动：项目在可见区域上方
-                                newScroll = Math.max(adj.lower || 0, itemY);
+                                newScroll = Math.max(lower, itemY);
                             } else if (itemBottom > visibleBottom) {
                                 // 向下滚动：项目在可见区域下方
-                                newScroll = Math.max(adj.lower || 0, itemBottom - scrollViewHeight);
+                                newScroll = Math.max(lower, itemBottom - pageSize);
                             }
                             
                             // 确保 newScroll 在有效范围内
-                            const maxScroll = Math.max(adj.lower || 0, adj.upper - adj.page_size);
+                            const maxScroll = Math.max(lower, upper - pageSize);
                             newScroll = Math.min(newScroll, maxScroll);
-                            newScroll = Math.max(adj.lower || 0, newScroll);
+                            newScroll = Math.max(lower, newScroll);
                             
-                            debugLog(`_updateSelection: setting adj.value from ${adj.value} to ${newScroll}`);
-                            adj.set_value(newScroll);
-                            // 触发 changed 事件以确保 UI 更新
-                            adj.emit('changed');
-                            debugLog(`_updateSelection: adj.value after set_value: ${adj.value}`);
+                            debugLog(`_updateSelection: setting scroll value from ${currentScroll} to ${newScroll} (max=${maxScroll})`);
+                            setAdjValue(newScroll);
+                            debugLog(`_updateSelection: scroll value after set=${getAdjValue()}`);
                         } else {
                             debugLog(`_updateSelection: item already visible, no scroll needed`);
                         }
@@ -2060,21 +2080,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
             // Also call after a delay to ensure layout is complete
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
                 scrollToRow();
-                
-                // Try to transfer focus (this will trigger key-focus-in as a bonus)
-                try {
-                    if (selectedRow && !selectedRow.is_destroyed()) {
-                        const stage = global.stage;
-                        const currentFocus = stage.get_key_focus();
-                        if (currentFocus !== selectedRow) {
-                            selectedRow.grab_key_focus();
-                            debugLog(`_updateSelection: transferred focus to row ${this._selectedIndex}`);
-                        }
-                    }
-                } catch (e) {
-                    debugLog(`_updateSelection: focus error: ${e.message}`);
-                }
-                
                 return GLib.SOURCE_REMOVE;
             });
             
