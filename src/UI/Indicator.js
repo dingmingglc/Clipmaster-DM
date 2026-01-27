@@ -34,7 +34,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._monitor = extension._monitor;
 
         this._items = [];
-        this._selectedIndex = 0;
+        this._selectedIndex = -1; // No item selected initially
         this._searchQuery = '';
         this._currentListId = null;
         this._currentType = null;
@@ -1024,7 +1024,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         
         this._searchEntry.set_text('');
         this._searchQuery = '';
-        this._selectedIndex = 0;
+        this._selectedIndex = -1; // No item selected initially
         this._currentListId = null;
         this._currentType = ItemType.TEXT;
         this._manageMode = false;
@@ -1237,7 +1237,10 @@ class ClipMasterIndicator extends PanelMenu.Button {
             this._itemsBox.add_child(row);
         });
 
-        this._updateSelection();
+        // Only update selection if there's an active selection (from keyboard navigation)
+        if (this._selectedIndex >= 0) {
+            this._updateSelection();
+        }
     }
 
     _createItemRow(item, index) {
@@ -1925,20 +1928,36 @@ class ClipMasterIndicator extends PanelMenu.Button {
         }
 
         if (symbol === Clutter.KEY_Up || symbol === Clutter.KEY_KP_Up) {
-            if (this._selectedIndex > 0) {
+            if (this._items.length === 0) return Clutter.EVENT_STOP;
+            
+            if (this._selectedIndex < 0) {
+                // First time: select last item
+                this._selectedIndex = this._items.length - 1;
+            } else if (this._selectedIndex > 0) {
                 this._selectedIndex--;
-                this._updateSelection();
-                this._scrollToSelected();
+            } else {
+                // Already at first item, wrap to last
+                this._selectedIndex = this._items.length - 1;
             }
+            this._updateSelection();
+            this._scrollToSelected();
             return Clutter.EVENT_STOP;
         }
 
         if (symbol === Clutter.KEY_Down || symbol === Clutter.KEY_KP_Down) {
-            if (this._selectedIndex < this._items.length - 1) {
+            if (this._items.length === 0) return Clutter.EVENT_STOP;
+            
+            if (this._selectedIndex < 0) {
+                // First time: select first item
+                this._selectedIndex = 0;
+            } else if (this._selectedIndex < this._items.length - 1) {
                 this._selectedIndex++;
-                this._updateSelection();
-                this._scrollToSelected();
+            } else {
+                // Already at last item, wrap to first
+                this._selectedIndex = 0;
             }
+            this._updateSelection();
+            this._scrollToSelected();
             return Clutter.EVENT_STOP;
         }
 
