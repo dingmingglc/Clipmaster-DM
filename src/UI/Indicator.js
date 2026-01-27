@@ -2000,19 +2000,44 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     newScrollValue = Math.min(newScrollValue, maxScroll);
                     newScrollValue = Math.max(0, newScrollValue);
                     
-                    // Try using ease animation if available, otherwise set directly
+                    // Debug: log the values
+                    debugLog(`_scrollToSelected: currentScroll=${currentScroll}, newScrollValue=${newScrollValue}, adj.upper=${adj.upper}, scrollViewHeight=${scrollViewHeight}`);
+                    
+                    // Try multiple methods to ensure scrolling works
+                    // Method 1: Direct assignment
+                    adj.value = newScrollValue;
+                    
+                    // Method 2: Try ease animation if available
                     if (typeof adj.ease === 'function') {
                         const currentValue = adj.value;
                         if (Math.abs(newScrollValue - currentValue) > 0.1) {
                             const mode = Clutter.AnimationMode.EASE_OUT_CUBIC;
                             adj.ease(newScrollValue, 150, mode);
-                        } else {
-                            adj.value = newScrollValue;
                         }
-                    } else {
-                        // Direct assignment
-                        adj.value = newScrollValue;
                     }
+                    
+                    // Method 3: Try vscroll methods if available
+                    const vscroll = this._scrollView.vscroll;
+                    if (vscroll) {
+                        // Try scroll_to_item if available
+                        if (typeof vscroll.scroll_to_item === 'function') {
+                            vscroll.scroll_to_item(selected);
+                        }
+                        // Try ensure_visible if available
+                        if (typeof vscroll.ensure_visible === 'function') {
+                            vscroll.ensure_visible(selected);
+                        }
+                    }
+                    
+                    // Method 4: Force update by invalidating
+                    this._scrollView.invalidate_allocation();
+                    this._itemsBox.invalidate_allocation();
+                    
+                    // Verify the value was set
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
+                        debugLog(`_scrollToSelected: After setting, adj.value=${adj.value}, expected=${newScrollValue}`);
+                        return GLib.SOURCE_REMOVE;
+                    });
                 }
             } catch (e) {
                 debugLog(`_scrollToSelected error: ${e.message}`);
