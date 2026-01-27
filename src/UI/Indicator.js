@@ -1024,11 +1024,11 @@ class ClipMasterIndicator extends PanelMenu.Button {
             // If menu is at top-left (0, 0 or very close), reposition it
             if (menuX < 50 && menuY < 50) {
                 debugLog('Menu position incorrect, fixing...');
-                // Position at bottom-right, similar to where Dash to Panel would be
+                // Position at top-right, similar to where Dash to Panel (top) would be
                 const menuWidth = this.menu.actor.width || 450;
                 const menuHeight = this.menu.actor.height || 550;
                 const x = monitor.x + monitor.width - menuWidth - 20;
-                const y = monitor.y + monitor.height - menuHeight - 60; // Leave space for panel
+                const y = monitor.y + 60; // Leave space for top panel
                 
                 this.menu.actor.set_position(x, y);
                 debugLog(`Menu repositioned to: ${x}, ${y}`);
