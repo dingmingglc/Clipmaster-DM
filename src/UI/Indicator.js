@@ -1013,6 +1013,29 @@ class ClipMasterIndicator extends PanelMenu.Button {
             }
             return GLib.SOURCE_REMOVE;
         }, 'focus-search');
+
+        // Fix menu position when panel is hidden (e.g., Dash to Panel auto-hide)
+        this._timeoutManager.add(GLib.PRIORITY_DEFAULT, 100, () => {
+            if (!this.menu.isOpen) return GLib.SOURCE_REMOVE;
+            
+            const [menuX, menuY] = this.menu.actor.get_transformed_position();
+            const monitor = Main.layoutManager.primaryMonitor;
+            
+            // If menu is at top-left (0, 0 or very close), reposition it
+            if (menuX < 50 && menuY < 50) {
+                debugLog('Menu position incorrect, fixing...');
+                // Position at bottom-right, similar to where Dash to Panel would be
+                const menuWidth = this.menu.actor.width || 450;
+                const menuHeight = this.menu.actor.height || 550;
+                const x = monitor.x + monitor.width - menuWidth - 20;
+                const y = monitor.y + monitor.height - menuHeight - 60; // Leave space for panel
+                
+                this.menu.actor.set_position(x, y);
+                debugLog(`Menu repositioned to: ${x}, ${y}`);
+            }
+            
+            return GLib.SOURCE_REMOVE;
+        }, 'fix-menu-position');
     }
 
     _onMenuClosed() {
