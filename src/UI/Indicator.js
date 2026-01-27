@@ -1982,6 +1982,30 @@ class ClipMasterIndicator extends PanelMenu.Button {
                     }
                     
                     if (adj) {
+                        // 首先，计算 itemsBox 的总高度（所有行的累积高度）
+                        let itemsBoxHeight = 0;
+                        if (this._itemRows && this._itemRows.length > 0) {
+                            for (let i = 0; i < this._itemRows.length; i++) {
+                                if (this._itemRows[i] && this._itemRows[i].height > 0) {
+                                    itemsBoxHeight += this._itemRows[i].height;
+                                }
+                            }
+                        }
+                        // 如果累积高度为0，使用 itemsBox 的实际高度
+                        if (itemsBoxHeight === 0 && this._itemsBox && this._itemsBox.height > 0) {
+                            itemsBoxHeight = this._itemsBox.height;
+                        }
+                        
+                        // 获取 scrollView 的可见高度
+                        const scrollViewHeight = this._scrollView.height || 300;
+                        
+                        // 更新 adjustment 的 upper 和 page_size
+                        if (itemsBoxHeight > 0) {
+                            adj.upper = itemsBoxHeight;
+                            adj.page_size = scrollViewHeight;
+                            debugLog(`_updateSelection: updated adj.upper=${adj.upper}, adj.page_size=${adj.page_size}, itemsBoxHeight=${itemsBoxHeight}, scrollViewHeight=${scrollViewHeight}`);
+                        }
+                        
                         // 直接使用累积高度计算位置（更可靠的方法）
                         let itemY = 0;
                         for (let i = 0; i < this._selectedIndex; i++) {
@@ -1992,7 +2016,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
                         
                         const itemHeight = selectedRow.height || 50;
                         const itemBottom = itemY + itemHeight;
-                        const scrollViewHeight = this._scrollView.height || 300;
                         const currentScroll = adj.value;
                         const visibleTop = currentScroll;
                         const visibleBottom = currentScroll + scrollViewHeight;
