@@ -4,6 +4,7 @@
  */
 
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 
@@ -12,6 +13,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { ItemType, debugLog } from '../Util/Constants.js';
 import { tr as _ } from '../Util/Translations.js';
+import { SMILEY_EMOJIS } from '../Util/SmileyData.js';
 
 /**
  * UI Components Builder Mixin
@@ -375,32 +377,53 @@ export const UIComponentsMixin = {
         this._favButton.connect('clicked', () => this._setFilter(-1));
         filterBar.add_child(this._favButton);
 
-        // URL button
+        // URL button (icon)
         this._urlButton = new St.Button({
             style_class: 'clipmaster-filter-button',
-            label: _('URL'),
+            child: new St.Icon({ icon_name: 'emblem-web-symbolic', icon_size: 14 }),
             can_focus: false,
+            track_hover: true,
         });
+        this._urlButton._tooltipText = _('URL');
+        this._urlButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
         this._urlButton.connect('clicked', () => this._setFilter(null, ItemType.URL));
         filterBar.add_child(this._urlButton);
 
-        // Code button
+        // Code button (icon)
         this._codeButton = new St.Button({
             style_class: 'clipmaster-filter-button',
-            label: _('Code'),
+            child: new St.Icon({ icon_name: 'accessories-text-editor-symbolic', icon_size: 14 }),
             can_focus: false,
+            track_hover: true,
         });
+        this._codeButton._tooltipText = _('Code');
+        this._codeButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
         this._codeButton.connect('clicked', () => this._setFilter(null, ItemType.CODE));
         filterBar.add_child(this._codeButton);
 
-        // Images button
+        // Images button (icon)
         this._imageButton = new St.Button({
             style_class: 'clipmaster-filter-button',
-            label: _('Images'),
+            child: new St.Icon({ icon_name: 'image-x-generic-symbolic', icon_size: 14 }),
             can_focus: false,
+            track_hover: true,
         });
+        this._imageButton._tooltipText = _('Images');
+        this._imageButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
         this._imageButton.connect('clicked', () => this._setFilter(null, ItemType.IMAGE));
         filterBar.add_child(this._imageButton);
+
+        // Smiley button
+        this._iconButton = new St.Button({
+            style_class: 'clipmaster-filter-button',
+            child: new St.Icon({ icon_name: 'face-smile-symbolic', icon_size: 14 }),
+            can_focus: false,
+            track_hover: true,
+        });
+        this._iconButton._tooltipText = _('Smileys');
+        this._iconButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
+        this._iconButton.connect('clicked', () => this._setFilter(null, null, false, true));
+        filterBar.add_child(this._iconButton);
 
         // All button
         this._allButton = new St.Button({
@@ -436,7 +459,28 @@ export const UIComponentsMixin = {
         const lists = this._database.getLists();
 
         if (lists.length === 0) {
-            this._listsBar.visible = false;
+            this._listsBar.visible = true;
+
+            const emptyLabel = new St.Label({
+                text: _('Lists'),
+                style_class: 'clipmaster-list-tag-label',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            this._listsBar.add_child(emptyLabel);
+
+            // Add "Manage" button to enter list management view
+            this._manageListsBtn = new St.Button({
+                style_class: 'clipmaster-list-add-btn',
+                can_focus: false,
+                track_hover: true,
+            });
+            this._manageListsBtn.set_child(new St.Icon({ icon_name: 'emblem-system-symbolic', icon_size: 12 }));
+            this._manageListsBtn._tooltipText = _('Manage Lists');
+            this._manageListsBtn.connect('notify::hover', (btn) => this._onButtonHover(btn));
+            this._manageListsBtn.connect('clicked', () => {
+                this._setFilter(null, null, true); // Enter manage mode
+            });
+            this._listsBar.add_child(this._manageListsBtn);
             return;
         }
 
@@ -508,6 +552,50 @@ export const UIComponentsMixin = {
             this._setFilter(null, null, true); // Enter manage mode
         });
         this._listsBar.add_child(this._manageListsBtn);
+    },
+
+    _loadIconsView() {
+        if (!this._itemsBox) return;
+        this._closeContextPanel();
+        this._closeQrPanel();
+        this._itemsBox.destroy_all_children();
+        this._itemRows = [];
+
+        const perRow = 8;
+        const closeOnPaste = this._settings.get_boolean('close-on-paste');
+        const pasteOnSelect = this._settings.get_boolean('paste-on-select');
+
+        for (let i = 0; i < SMILEY_EMOJIS.length; i += perRow) {
+            const row = new St.BoxLayout({
+                style_class: 'clipmaster-icons-row',
+                x_expand: true,
+            });
+            for (let j = 0; j < perRow && i + j < SMILEY_EMOJIS.length; j++) {
+                const emoji = SMILEY_EMOJIS[i + j];
+                const btn = new St.Button({
+                    style_class: 'clipmaster-icon-button',
+                    label: emoji,
+                    can_focus: true,
+                    track_hover: true,
+                });
+                btn.connect('clicked', () => {
+                    this._monitor.copyToClipboard(emoji);
+                    if (closeOnPaste && !this._isPinned) {
+                        this.menu.close();
+                        if (pasteOnSelect && this._keyboard) {
+                            this._timeoutManager.add(GLib.PRIORITY_DEFAULT, 50, () => {
+                                try {
+                                    this._keyboard.paste();
+                                } catch (e) {}
+                                return GLib.SOURCE_REMOVE;
+                            }, 'paste-on-select');
+                        }
+                    }
+                });
+                row.add_child(btn);
+            }
+            this._itemsBox.add_child(row);
+        }
     },
 
     _buildItemsList() {

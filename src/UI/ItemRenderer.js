@@ -295,6 +295,12 @@ export const ItemRendererMixin = {
             return;
         }
 
+        // If in icons mode, show smiley grid
+        if (this._iconsMode) {
+            this._loadIconsView();
+            return;
+        }
+
         const limit = this._settings.get_int('items-per-page') || 50;
         const textIncludeUrlCode = this._settings.get_boolean('text-include-url-code');
         const options = {

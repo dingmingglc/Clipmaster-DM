@@ -142,6 +142,7 @@ export const MenuLifecycleMixin = {
         this._currentListId = null;
         this._currentType = ItemType.TEXT;
         this._manageMode = false;
+        this._iconsMode = false;
         // Keep plainTextMode state across menu open/close
 
         this._isPinned = false;
@@ -152,7 +153,7 @@ export const MenuLifecycleMixin = {
 
         // Reset filter buttons
         [this._allButton, this._favButton, this._textButton, this._imageButton,
-         this._urlButton, this._codeButton].forEach(b => {
+         this._urlButton, this._codeButton, this._iconButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
 
@@ -244,14 +245,15 @@ export const MenuLifecycleMixin = {
         this._clearSelection();
     },
 
-    _setFilter(listId, type = null, manageMode = false) {
+    _setFilter(listId, type = null, manageMode = false, iconsMode = false) {
         this._currentListId = listId;
         this._currentType = type;
         this._manageMode = manageMode;
+        this._iconsMode = iconsMode;
 
         // Clear all filter button states
         [this._allButton, this._favButton, this._textButton, this._imageButton,
-         this._urlButton, this._codeButton].forEach(b => {
+         this._urlButton, this._codeButton, this._iconButton].forEach(b => {
             if (b) b.remove_style_class_name('active');
         });
 
@@ -271,6 +273,8 @@ export const MenuLifecycleMixin = {
         if (manageMode) {
             if (this._manageListsBtn)
                 this._manageListsBtn.add_style_class_name('active');
+        } else if (iconsMode && this._iconButton) {
+            this._iconButton.add_style_class_name('active');
         } else if (listId === -1) {
             this._favButton.add_style_class_name('active');
         } else if (listId !== null && listId !== undefined && listId > 0) {

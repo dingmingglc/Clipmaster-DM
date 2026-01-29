@@ -18,6 +18,9 @@ export class ClipboardDatabase {
         this._storagePath = storagePath || GLib.build_filenamev([
             GLib.get_user_data_dir(), 'clipmaster', 'clipboard.json'
         ]);
+        this._imagesStoragePath = this._storagePath.endsWith('.json')
+            ? this._storagePath.replace(/\.json$/, '.images.json')
+            : `${this._storagePath}.images.json`;
         this._settings = settings;
         this._onNotification = onNotification;
 
@@ -108,29 +111,52 @@ export class ClipboardDatabase {
     async _load() {
         try {
             const jsonStr = await FileUtils.loadTextFile(this._storagePath);
+            let loadedNonImages = [];
+            let loadedImages = [];
+            let loadedLists = [];
+            let loadedNextId = this._nextId;
+
             if (jsonStr) {
                 let decodedStr = jsonStr;
-
                 if (this._encryption && decodedStr.startsWith('ENC:')) {
                     decodedStr = this._encryption.decrypt(decodedStr.substring(4));
                 }
-
                 const data = JSON.parse(decodedStr);
-
-                // Merge pending items that might have been added during async load
-                const loadedItems = data.items || [];
-                if (this._pendingItems.length > 0) {
-                    // Add pending items to the top if they are newer
-                    this._items = [...this._pendingItems, ...loadedItems];
-                    this._pendingItems = [];
-                    this._isDirty = true; // Need to save the merge
-                } else {
-                    this._items = loadedItems;
-                }
-
-                this._lists = data.lists || [];
-                this._nextId = Math.max(data.nextId || 1, this._nextId);
+                const mainItems = data.items || [];
+                const mainImages = mainItems.filter(i => i?.type === ItemType.IMAGE);
+                const mainNonImages = mainItems.filter(i => i?.type !== ItemType.IMAGE);
+                loadedNonImages = mainNonImages;
+                loadedImages = [...loadedImages, ...mainImages];
+                loadedLists = data.lists || [];
+                loadedNextId = Math.max(data.nextId || 1, loadedNextId);
             }
+
+            // Load image items from separate file (if exists)
+            const imagesStr = await FileUtils.loadTextFile(this._imagesStoragePath);
+            if (imagesStr) {
+                let decodedImagesStr = imagesStr;
+                if (this._encryption && decodedImagesStr.startsWith('ENC:')) {
+                    decodedImagesStr = this._encryption.decrypt(decodedImagesStr.substring(4));
+                }
+                const imgData = JSON.parse(decodedImagesStr);
+                loadedImages = imgData.items || [];
+                loadedNextId = Math.max(imgData.nextId || 1, loadedNextId);
+            }
+
+            const loadedItems = [...loadedNonImages, ...loadedImages];
+
+            // Merge pending items that might have been added during async load
+            if (this._pendingItems.length > 0) {
+                // Add pending items to the top if they are newer
+                this._items = [...this._pendingItems, ...loadedItems];
+                this._pendingItems = [];
+                this._isDirty = true; // Need to save the merge
+            } else {
+                this._items = loadedItems;
+            }
+
+            this._lists = loadedLists;
+            this._nextId = Math.max(loadedNextId, this._nextId);
             this._isLoaded = true;
 
             // Ensure contentHash exists for all loaded items and rebuild indexes
@@ -210,22 +236,32 @@ export class ClipboardDatabase {
 
         this._isSaving = true;
         try {
+            const nonImageItems = this._items.filter(i => i?.type !== ItemType.IMAGE);
+            const imageItems = this._items.filter(i => i?.type === ItemType.IMAGE);
+
             const data = {
-                items: this._items,
+                items: nonImageItems,
                 lists: this._lists,
+                nextId: this._nextId
+            };
+            const imageData = {
+                items: imageItems,
                 nextId: this._nextId
             };
 
             // Serialize during idle to reduce chances of UI jank.
             // Also avoid pretty-printing to reduce CPU + file size.
             let jsonStr = '';
+            let imageJsonStr = '';
             await new Promise(resolve => {
                 GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                     try {
                         jsonStr = JSON.stringify(data);
+                        imageJsonStr = JSON.stringify(imageData);
                     } catch (e) {
                         console.error(`ClipMaster: JSON stringify error: ${e.message}`);
                         jsonStr = '';
+                        imageJsonStr = '';
                     }
                     resolve();
                     return GLib.SOURCE_REMOVE;
@@ -236,9 +272,12 @@ export class ClipboardDatabase {
 
             if (this._encryption) {
                 jsonStr = 'ENC:' + this._encryption.encrypt(jsonStr);
+                imageJsonStr = imageJsonStr ? 'ENC:' + this._encryption.encrypt(imageJsonStr) : imageJsonStr;
             }
 
-            if (await FileUtils.saveTextFile(this._storagePath, jsonStr)) {
+            const mainSaved = await FileUtils.saveTextFile(this._storagePath, jsonStr);
+            const imagesSaved = await FileUtils.saveTextFile(this._imagesStoragePath, imageJsonStr);
+            if (mainSaved && imagesSaved) {
                 this._isDirty = false;
                 await this._checkDatabaseSize();
             }

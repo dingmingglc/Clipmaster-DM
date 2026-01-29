@@ -200,7 +200,7 @@
     background-color: transparent;
     border: none;
     border-radius: 8px;
-    padding: 6px 12px;
+    padding: 6px 6px;
     color: #a6adc8;
     font-size: 12px;
 }
@@ -238,6 +238,28 @@
     spacing: 0;
 }
 
+/* Smiley/emoji grid */
+.clipmaster-icons-row {
+    padding: 2px 8px;
+}
+
+.clipmaster-icon-button {
+    min-width: 28px;
+    min-height: 28px;
+    margin: 2px 4px 2px 0;
+    padding: 2px;
+    border-radius: 6px;
+    background-color: transparent;
+    font-size: 18px;
+}
+
+.clipmaster-icon-button:hover {
+    background-color: rgba(137, 180, 250, 0.2);
+}
+
+.clipmaster-popup.light .clipmaster-icon-button:hover {
+    background-color: rgba(30, 102, 245, 0.15);
+}
 /* Individual Item Row */
 .clipmaster-item {
     padding: 4px 10px;
