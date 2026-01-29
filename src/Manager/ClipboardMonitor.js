@@ -488,15 +488,21 @@ export class ClipboardMonitor {
 
         const trimmed = text.trim();
 
-        if (this._cachedSettings.trackImages) {
-            const isImagePath = await this._isImageFilePath(trimmed); // Await async check
-
-            if (isImagePath) {
-                debugLog(`✓ Text appears to be an image file path`);
-                this._processImageFile(trimmed, selectionType);
-                return;
-            }
+        // DISABLED: File path detection to prevent crashes when copying folders
+        // Check for file:// URI early to avoid processing folder paths
+        if (trimmed.includes('file://')) {
+            debugLog('File URI detected (likely folder/files), skipping to prevent crashes');
+            return;
         }
+        // if (this._cachedSettings.trackImages) {
+        //     const isImagePath = await this._isImageFilePath(trimmed); // Await async check
+        //
+        //     if (isImagePath) {
+        //         debugLog(`✓ Text appears to be an image file path`);
+        //         this._processImageFile(trimmed, selectionType);
+        //         return;
+        //     }
+        // }
 
         let type = ItemType.TEXT;
         if (trimmed.match(/^https?:\/\//i)) {
@@ -506,12 +512,14 @@ export class ClipboardMonitor {
         } else if (trimmed.startsWith('<') && trimmed.includes('>')) {
             type = ItemType.HTML;
         } else if (trimmed.startsWith('file://')) {
-            // Only track files if trackFiles is enabled
-            if (!this._cachedSettings.trackFiles) {
-                debugLog('File path detected but trackFiles is disabled, skipping');
-                return;
-            }
-            type = ItemType.FILE;
+            // DISABLED: File tracking to prevent crashes when copying folders
+            debugLog('File path detected but file tracking is disabled, skipping');
+            return;
+            // if (!this._cachedSettings.trackFiles) {
+            //     debugLog('File path detected but trackFiles is disabled, skipping');
+            //     return;
+            // }
+            // type = ItemType.FILE;
         } else if (this._isCodeSnippet(trimmed)) {
             type = ItemType.CODE;
         }
@@ -558,14 +566,17 @@ export class ClipboardMonitor {
     }
 
     async _isImageFilePath(text) {
-        if (!text || text.length < 3) return false;
-
-        const looksLikePath = text.startsWith('/') ||
-            text.startsWith('~/') ||
-            text.startsWith('./') ||
-            (text.includes('/') && !text.includes('://'));
-
-        if (!looksLikePath) return false;
+        // DISABLED: File path detection to prevent crashes when copying folders
+        return false;
+        
+        // if (!text || text.length < 3) return false;
+        //
+        // const looksLikePath = text.startsWith('/') ||
+        //     text.startsWith('~/') ||
+        //     text.startsWith('./') ||
+        //     (text.includes('/') && !text.includes('://'));
+        //
+        // if (!looksLikePath) return false;
 
         const filePath = this._expandFilePath(text);
 
@@ -632,9 +643,13 @@ export class ClipboardMonitor {
     }
 
     async _processImageFile(filePath, selectionType = 'CLIPBOARD') {
-        if (this._isStopped || !this._database) return;
-
-        const fullPath = this._expandFilePath(filePath);
+        // DISABLED: Image file processing to prevent crashes when copying folders
+        debugLog('_processImageFile called but is disabled');
+        return;
+        
+        // if (this._isStopped || !this._database) return;
+        //
+        // const fullPath = this._expandFilePath(filePath);
 
         const file = Gio.File.new_for_path(fullPath);
         if (!file.query_exists(null)) return;
