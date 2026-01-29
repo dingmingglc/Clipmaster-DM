@@ -24,7 +24,6 @@ export class ClipboardMonitor {
         this._lastContent = null;
         this._lastPrimaryContent = null;
         this._lastImageHash = null;
-        this._imageCheckProcess = null;
         this._isStopped = false;
 
         this._signalManager = new SignalManager();
@@ -56,6 +55,61 @@ export class ClipboardMonitor {
             (settings, key) => this._updateCachedSetting(key),
             'settings-changed'
         );
+
+        // Pre-compile regex patterns for code detection (performance optimization)
+        this._codePatterns = {
+            shell: [
+                /^\s*(sudo|apt|apt-get|dnf|yum|pacman|brew|npm|yarn|pnpm|pip|pip3|python|python3|node|cargo|go|rustc|gcc|g\+\+|make|cmake|git|docker|kubectl|helm|terraform|ansible|ssh|scp|curl|wget|chmod|chown|mkdir|rm|cp|mv|ls|cd|cat|grep|sed|awk|find|tar|zip|unzip)\s+/im,
+                /^\s*\$\s+\w+/m,
+                /^\s*PS\s*\w*>/m,
+                /^\s*#\s*(install|update|run|build|test|deploy)/im
+            ],
+            powershell: [
+                /^\s*(Get-|Set-|New-|Remove-|Invoke-|Start-|Stop-|Out-|Write-|Read-|Import-|Export-)\w+/im,
+                /\$\w+\s*=\s*/,
+                /\|\s*(Where-Object|Select-Object|ForEach-Object|Sort-Object)/i
+            ],
+            code: [
+                /^\s*(const|let|var|function|class|import|export|async|await|=>\s*{|\(\)\s*=>)/m,
+                /^\s*(if|else|for|while|switch|try|catch|throw|return)\s*[({]/m,
+                /\bconsole\.(log|error|warn|info|debug)\s*\(/,
+                /\bmodule\.exports\s*=/,
+                /\brequire\s*\(['"]/,
+                /^\s*(def|class|import|from|if __name__|@\w+|async def|lambda)\s+/m,
+                /^\s*print\s*\(/m,
+                /^\s*(for|while|if|elif|else|try|except|with|raise|return|yield)\s+/m,
+                /^\s*(fn|let|mut|impl|struct|enum|trait|pub|mod|use|crate|match)\s+/m,
+                /^\s*println!\s*\(/m,
+                /^\s*(func|package|import|type|struct|interface|go|defer|chan)\s+/m,
+                /^\s*fmt\.(Print|Sprintf|Errorf)/m,
+                /^\s*(public|private|protected|static|void|class|interface|abstract|override|final)\s+/m,
+                /^\s*System\.(out|err)\./m,
+                /^\s*Console\.(Write|Read)/m,
+                /^\s*#\s*(include|define|ifdef|ifndef|pragma)\s+/m,
+                /^\s*(int|void|char|float|double|long|short|unsigned|signed)\s+\w+\s*[;(]/m,
+                /^\s*printf\s*\(/m,
+                /^\s*std::/m,
+                /^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|FROM|WHERE|JOIN|ORDER BY|GROUP BY)\s+/im,
+                /^{\s*"\w+":\s*/m,
+                /^\[\s*{\s*"\w+":/m,
+                /^\s*[.#\w-]+\s*{\s*[\w-]+\s*:/m,
+                /^\s*@(media|import|keyframes|font-face)\s+/m
+            ],
+            operators: /[{}\[\];]|=>|->|::|\+=|-=|\*=|\/=|==|!=|&&|\|\|/
+        };
+    }
+
+    _getMetaSelectionType(selectionType) {
+        return selectionType === 'PRIMARY'
+            ? Meta.SelectionType.SELECTION_PRIMARY
+            : Meta.SelectionType.SELECTION_CLIPBOARD;
+    }
+
+    _expandFilePath(filePath) {
+        if (filePath.startsWith('~/')) {
+            return GLib.build_filenamev([GLib.get_home_dir(), filePath.substring(2)]);
+        }
+        return filePath;
     }
 
     _updateCachedSetting(key) {
@@ -141,12 +195,6 @@ export class ClipboardMonitor {
             this._settingsCache.destroy();
             this._settingsCache = null;
         }
-
-        this._cancelImageCheck();
-    }
-
-    _cancelImageCheck() {
-        // No subprocess logic needed anymore
     }
 
     _onSelectionOwnerChanged(selection, selectionType, selectionSource) {
@@ -193,14 +241,20 @@ export class ClipboardMonitor {
         if (this._isStopped) return;
 
         debugLog(`Checking clipboard...`);
-        this._checkForImageWithCallback('CLIPBOARD', (imageFound) => {
-            debugLog(`Image check callback: imageFound=${imageFound}, trackImages=${this._cachedSettings.trackImages}`);
-            if (!imageFound) {
-                this._checkClipboardText();
-            } else {
-                debugLog(`Image found and processed, skipping text check`);
-            }
-        });
+        if (this._cachedSettings?.trackImages) {
+            this._checkForImageWithCallback('CLIPBOARD', (imageFound) => {
+                debugLog(`Image check callback: imageFound=${imageFound}, trackImages=${this._cachedSettings.trackImages}`);
+                if (!imageFound) {
+                    this._checkClipboardText();
+                } else {
+                    debugLog(`Image found and processed, skipping text check`);
+                }
+            });
+            return;
+        }
+
+        // trackImages=false: skip MIME/image checks entirely
+        this._checkClipboardText();
     }
 
     _checkClipboardText() {
@@ -210,10 +264,7 @@ export class ClipboardMonitor {
             // Log redacted for privacy
             debugLog(`Got text from clipboard (length: ${text ? text.length : 0})`);
 
-            let skipDuplicates = true;
-            if (this._settings) {
-                skipDuplicates = this._settings.get_boolean('skip-duplicates');
-            }
+            const skipDuplicates = this._settingsCache.getBoolean('skip-duplicates', true);
 
             if (text && text !== this._lastContent) {
                 debugLog(`NEW content detected, processing...`);
@@ -255,10 +306,7 @@ export class ClipboardMonitor {
                 return;
             }
 
-            let skipDuplicates = true;
-            if (this._settings) {
-                skipDuplicates = this._settings.get_boolean('skip-duplicates');
-            }
+            const skipDuplicates = this._settingsCache.getBoolean('skip-duplicates', true);
 
             if (text && text !== this._lastPrimaryContent) {
                 debugLog(`NEW primary content detected, processing...`);
@@ -286,9 +334,7 @@ export class ClipboardMonitor {
         }
 
         // Use native Meta.Selection API
-        const metaSelectionType = selectionType === 'PRIMARY'
-            ? Meta.SelectionType.SELECTION_PRIMARY
-            : Meta.SelectionType.SELECTION_CLIPBOARD;
+        const metaSelectionType = this._getMetaSelectionType(selectionType);
 
         const mimetypes = this._selection.get_mimetypes(metaSelectionType);
         debugLog(`Available MIME types: ${mimetypes ? mimetypes.join(', ') : 'none'}`);
@@ -300,8 +346,7 @@ export class ClipboardMonitor {
 
             if (hasImage) {
                 debugLog(`✓ Image MIME type detected via Meta.Selection`);
-                const isWayland = GLib.getenv('XDG_SESSION_TYPE') === 'wayland';
-                this._fetchImageFromClipboard(isWayland, selectionType, callback);
+                this._fetchImageFromClipboard(selectionType, callback);
                 return;
             }
         }
@@ -310,7 +355,7 @@ export class ClipboardMonitor {
         if (callback) callback(false);
     }
 
-    _fetchImageFromClipboard(isWayland, selectionType = 'CLIPBOARD', callback = null) {
+    _fetchImageFromClipboard(selectionType = 'CLIPBOARD', callback = null) {
         if (this._isStopped) {
             if (callback) callback(false);
             return;
@@ -320,9 +365,7 @@ export class ClipboardMonitor {
         const timestamp = Date.now();
 
         try {
-            const metaSelectionType = selectionType === 'PRIMARY'
-                ? Meta.SelectionType.SELECTION_PRIMARY
-                : Meta.SelectionType.SELECTION_CLIPBOARD;
+            const metaSelectionType = this._getMetaSelectionType(selectionType);
 
             const tempDir = GLib.get_tmp_dir();
             const tempPath = GLib.build_filenamev([tempDir, `clipmaster_${timestamp}.png`]);
@@ -362,7 +405,7 @@ export class ClipboardMonitor {
                                 if (hash !== this._lastImageHash) {
                                     this._lastImageHash = hash;
 
-                                    if (this._cachedSettings && this._cachedSettings.trackImages) {
+                                    if (this._cachedSettings?.trackImages) {
                                         // Use ImageStorage for file-based storage with thumbnails
                                         const storageResult = await this._imageStorage.saveImage(contents, 'png', hash);
 
@@ -445,15 +488,21 @@ export class ClipboardMonitor {
 
         const trimmed = text.trim();
 
-        if (this._cachedSettings.trackImages) {
-            const isImagePath = await this._isImageFilePath(trimmed); // Await async check
-
-            if (isImagePath) {
-                debugLog(`✓ Text appears to be an image file path`);
-                this._processImageFile(trimmed, selectionType);
-                return;
-            }
+        // DISABLED: File path detection to prevent crashes when copying folders
+        // Check for file:// URI early to avoid processing folder paths
+        if (trimmed.includes('file://')) {
+            debugLog('File URI detected (likely folder/files), skipping to prevent crashes');
+            return;
         }
+        // if (this._cachedSettings.trackImages) {
+        //     const isImagePath = await this._isImageFilePath(trimmed); // Await async check
+        //
+        //     if (isImagePath) {
+        //         debugLog(`✓ Text appears to be an image file path`);
+        //         this._processImageFile(trimmed, selectionType);
+        //         return;
+        //     }
+        // }
 
         let type = ItemType.TEXT;
         if (trimmed.match(/^https?:\/\//i)) {
@@ -463,12 +512,14 @@ export class ClipboardMonitor {
         } else if (trimmed.startsWith('<') && trimmed.includes('>')) {
             type = ItemType.HTML;
         } else if (trimmed.startsWith('file://')) {
-            // Only track files if trackFiles is enabled
-            if (!this._cachedSettings.trackFiles) {
-                debugLog('File path detected but trackFiles is disabled, skipping');
-                return;
-            }
-            type = ItemType.FILE;
+            // DISABLED: File tracking to prevent crashes when copying folders
+            debugLog('File path detected but file tracking is disabled, skipping');
+            return;
+            // if (!this._cachedSettings.trackFiles) {
+            //     debugLog('File path detected but trackFiles is disabled, skipping');
+            //     return;
+            // }
+            // type = ItemType.FILE;
         } else if (this._isCodeSnippet(trimmed)) {
             type = ItemType.CODE;
         }
@@ -515,19 +566,19 @@ export class ClipboardMonitor {
     }
 
     async _isImageFilePath(text) {
-        if (!text || text.length < 3) return false;
+        // DISABLED: File path detection to prevent crashes when copying folders
+        return false;
+        
+        // if (!text || text.length < 3) return false;
+        //
+        // const looksLikePath = text.startsWith('/') ||
+        //     text.startsWith('~/') ||
+        //     text.startsWith('./') ||
+        //     (text.includes('/') && !text.includes('://'));
+        //
+        // if (!looksLikePath) return false;
 
-        const looksLikePath = text.startsWith('/') ||
-            text.startsWith('~/') ||
-            text.startsWith('./') ||
-            (text.includes('/') && !text.includes('://'));
-
-        if (!looksLikePath) return false;
-
-        let filePath = text;
-        if (text.startsWith('~/')) {
-            filePath = GLib.build_filenamev([GLib.get_home_dir(), text.substring(2)]);
-        }
+        const filePath = this._expandFilePath(text);
 
         try {
             const file = Gio.File.new_for_path(filePath);
@@ -563,75 +614,16 @@ export class ClipboardMonitor {
         // Shebang detection (#!/bin/bash, #!/usr/bin/env python, etc.)
         if (firstLine.startsWith('#!')) return true;
 
-        // Common shell/terminal patterns
-        const shellPatterns = [
-            /^\s*(sudo|apt|apt-get|dnf|yum|pacman|brew|npm|yarn|pnpm|pip|pip3|python|python3|node|cargo|go|rustc|gcc|g\+\+|make|cmake|git|docker|kubectl|helm|terraform|ansible|ssh|scp|curl|wget|chmod|chown|mkdir|rm|cp|mv|ls|cd|cat|grep|sed|awk|find|tar|zip|unzip)\s+/im,
-            /^\s*\$\s+\w+/m,  // $ command
-            /^\s*PS\s*\w*>/m,   // PowerShell prompt style
-            /^\s*#\s*(install|update|run|build|test|deploy)/im
-        ];
-
-        for (const pattern of shellPatterns) {
+        // Use pre-compiled patterns for better performance
+        for (const pattern of this._codePatterns.shell) {
             if (pattern.test(trimmedText)) return true;
         }
 
-        // PowerShell patterns
-        const powershellPatterns = [
-            /^\s*(Get-|Set-|New-|Remove-|Invoke-|Start-|Stop-|Out-|Write-|Read-|Import-|Export-)\w+/im,
-            /\$\w+\s*=\s*/,  // $variable = value
-            /\|\s*(Where-Object|Select-Object|ForEach-Object|Sort-Object)/i
-        ];
-
-        for (const pattern of powershellPatterns) {
+        for (const pattern of this._codePatterns.powershell) {
             if (pattern.test(trimmedText)) return true;
         }
 
-        // Programming language patterns
-        const codePatterns = [
-            // JavaScript/TypeScript
-            /^\s*(const|let|var|function|class|import|export|async|await|=>\s*{|\(\)\s*=>)/m,
-            /^\s*(if|else|for|while|switch|try|catch|throw|return)\s*[({]/m,
-            /\bconsole\.(log|error|warn|info|debug)\s*\(/,
-            /\bmodule\.exports\s*=/,
-            /\brequire\s*\(['"]/,
-
-            // Python
-            /^\s*(def|class|import|from|if __name__|@\w+|async def|lambda)\s+/m,
-            /^\s*print\s*\(/m,
-            /^\s*(for|while|if|elif|else|try|except|with|raise|return|yield)\s+/m,
-
-            // Rust
-            /^\s*(fn|let|mut|impl|struct|enum|trait|pub|mod|use|crate|match)\s+/m,
-            /^\s*println!\s*\(/m,
-
-            // Go
-            /^\s*(func|package|import|type|struct|interface|go|defer|chan)\s+/m,
-            /^\s*fmt\.(Print|Sprintf|Errorf)/m,
-
-            // Java/Kotlin/C#
-            /^\s*(public|private|protected|static|void|class|interface|abstract|override|final)\s+/m,
-            /^\s*System\.(out|err)\./m,
-            /^\s*Console\.(Write|Read)/m,
-
-            // C/C++
-            /^\s*#\s*(include|define|ifdef|ifndef|pragma)\s+/m,
-            /^\s*(int|void|char|float|double|long|short|unsigned|signed)\s+\w+\s*[;(]/m,
-            /^\s*printf\s*\(/m,
-            /^\s*std::/m,
-
-            // SQL
-            /^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|FROM|WHERE|JOIN|ORDER BY|GROUP BY)\s+/im,
-
-            // JSON/YAML-like (but multiline)
-            /^{\s*"\w+":\s*/m,
-            /^\[\s*{\s*"\w+":/m,
-
-            // CSS
-            /^\s*[.#\w-]+\s*{\s*[\w-]+\s*:/m,
-            /^\s*@(media|import|keyframes|font-face)\s+/m
-        ];
-
-        for (const pattern of codePatterns) {
+        for (const pattern of this._codePatterns.code) {
             if (pattern.test(trimmedText)) return true;
         }
 
@@ -641,7 +633,7 @@ export class ClipboardMonitor {
             const indentedLines = lines.filter(l => l.match(/^[\t ]{2,}/));
             if (indentedLines.length >= lines.length * 0.3) {
                 // Has brackets, semicolons, or common operators
-                if (/[{}\[\];]|=>|->|::|\+=|-=|\*=|\/=|==|!=|&&|\|\|/.test(trimmedText)) {
+                if (this._codePatterns.operators.test(trimmedText)) {
                     return true;
                 }
             }
@@ -651,12 +643,13 @@ export class ClipboardMonitor {
     }
 
     async _processImageFile(filePath, selectionType = 'CLIPBOARD') {
-        if (this._isStopped || !this._database) return;
-
-        let fullPath = filePath;
-        if (filePath.startsWith('~/')) {
-            fullPath = GLib.build_filenamev([GLib.get_home_dir(), filePath.substring(2)]);
-        }
+        // DISABLED: Image file processing to prevent crashes when copying folders
+        debugLog('_processImageFile called but is disabled');
+        return;
+        
+        // if (this._isStopped || !this._database) return;
+        //
+        // const fullPath = this._expandFilePath(filePath);
 
         const file = Gio.File.new_for_path(fullPath);
         if (!file.query_exists(null)) return;
@@ -681,12 +674,15 @@ export class ClipboardMonitor {
 
             const originalExt = fullPath.substring(fullPath.lastIndexOf('.'));
             const ext = originalExt.toLowerCase();
-            let imageFormat = 'png';
-            if (ext === '.jpg' || ext === '.jpeg') imageFormat = 'jpeg';
-            else if (ext === '.gif') imageFormat = 'gif';
-            else if (ext === '.webp') imageFormat = 'webp';
-            else if (ext === '.bmp') imageFormat = 'bmp';
-            else if (ext === '.svg') imageFormat = 'svg';
+            const formatMap = {
+                '.jpg': 'jpeg',
+                '.jpeg': 'jpeg',
+                '.gif': 'gif',
+                '.webp': 'webp',
+                '.bmp': 'bmp',
+                '.svg': 'svg'
+            };
+            const imageFormat = formatMap[ext] || 'png';
 
             // Use ImageStorage for file-based storage with thumbnails
             const storageResult = await this._imageStorage.saveImage(contents, imageFormat, hash);
@@ -739,7 +735,7 @@ export class ClipboardMonitor {
 
     async copyImageToClipboard(imageContent) {
         try {
-            let imageData = null;
+            let imageData;
 
             if (imageContent.includes('/') && !imageContent.startsWith('data:')) {
                 // Handle file path - load image from disk

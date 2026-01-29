@@ -221,32 +221,33 @@ export class HashUtils {
     static hashContent(content) {
         if (!content) return '';
 
-        let hash = 0;
         const str = String(content);
-
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
+        // Use SHA-256 to avoid collisions in duplicate detection.
+        // GLib returns a hex string.
+        try {
+            return GLib.compute_checksum_for_string(GLib.ChecksumType.SHA256, str, -1);
+        } catch (e) {
+            // Fallback (should be rare)
+            return GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, str, -1);
         }
-
-        return Math.abs(hash).toString(36);
     }
 
     static hashImageData(data) {
         if (!data || data.length === 0) return '';
 
-        let hash = 0;
-        const view = new Uint8Array(data);
-        const sampleSize = Math.min(view.length, 10000);
-        const step = Math.max(1, Math.floor(view.length / sampleSize));
-
-        for (let i = 0; i < view.length; i += step) {
-            hash = ((hash << 5) - hash) + view[i];
-            hash = hash & hash;
+        // For images, prefer strong hash to prevent false duplicates.
+        // Accept Uint8Array / GLib.Bytes / ArrayBuffer-like inputs.
+        try {
+            const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+            return GLib.compute_checksum_for_data(GLib.ChecksumType.SHA256, bytes);
+        } catch (e) {
+            try {
+                const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+                return GLib.compute_checksum_for_data(GLib.ChecksumType.MD5, bytes);
+            } catch (_) {
+                return '';
+            }
         }
-
-        return Math.abs(hash).toString(36);
     }
 }
 

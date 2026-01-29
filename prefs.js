@@ -752,14 +752,14 @@ export default class ClipMasterPreferences extends ExtensionPreferences {
         aboutPage.add(aboutGroup);
 
         const aboutRow = new Adw.ActionRow({
-            title: 'ClipMaster',
-            subtitle: _('ClipMaster - Clipboard manager for GNOME')
+            title: 'ClipMaster DM',
+            subtitle: this.metadata?.description || _('ClipMaster DM - Clipboard manager for GNOME')
         });
         aboutGroup.add(aboutRow);
 
         const versionRow = new Adw.ActionRow({
             title: _('Version'),
-            subtitle: '1.3'
+            subtitle: this.metadata?.['version-name'] || '1.0.0'
         });
         aboutGroup.add(versionRow);
 

@@ -4,24 +4,27 @@
  */
 
 import GObject from 'gi://GObject';
-import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
-import Pango from 'gi://Pango';
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
-import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
-
-import { ItemType, debugLog } from '../Util/Constants.js';
+import { debugLog } from '../Util/Constants.js';
 import { SignalManager, TimeoutManager } from '../Util/Utils.js';
-import { QrCodeGenerator, QrEcc } from '../Util/QrCodeGenerator.js';
 import { Keyboard } from '../Util/Keyboard.js';
-import { tr as _, initTranslations } from '../Util/Translations.js';
+
+// Mixin imports for code organization
+import { UIUtilsMixin } from './UIUtils.js';
+import { ThemeManagerMixin } from './ThemeManager.js';
+import { PasteHandlerMixin } from './PasteHandler.js';
+import { ContextPanelsMixin } from './ContextPanels.js';
+import { NavigationHandlerMixin } from './NavigationHandler.js';
+import { MenuLifecycleMixin } from './MenuLifecycle.js';
+import { ListManagerMixin } from './ListManager.js';
+import { ItemRendererMixin } from './ItemRenderer.js';
+import { UIComponentsMixin } from './UIComponents.js';
 
 export const ClipMasterIndicator = GObject.registerClass(
 class ClipMasterIndicator extends PanelMenu.Button {
@@ -107,7 +110,6 @@ class ClipMasterIndicator extends PanelMenu.Button {
         // Clear hover state when mouse leaves the entire menu (not just content area)
         this.menu.actor.connect('leave-event', () => {
             this._clearAllHoverStates();
-            // Removed: no longer clear selected on mouse leave (selected is only for keyboard navigation)
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -2160,6 +2162,35 @@ class ClipMasterIndicator extends PanelMenu.Button {
         this._closeContextPanel();
         this._closeQrPanel();
 
+        // Safety: disconnect global key capture if menu is destroyed while open
+        if (this._keyCaptureId) {
+            try {
+                global.stage.disconnect(this._keyCaptureId);
+            } catch (_) {}
+            this._keyCaptureId = null;
+        }
+
+        // Stop any incremental item rendering still scheduled
+        if (this._renderItemsSourceId) {
+            try {
+                GLib.source_remove(this._renderItemsSourceId);
+            } catch (_) {}
+            this._renderItemsSourceId = null;
+        }
+
+        // Destroy search-history popup menu actor (added to Main.uiGroup)
+        if (this._searchHistoryMenu) {
+            try {
+                if (this._searchHistoryMenu.isOpen)
+                    this._searchHistoryMenu.close();
+                const actor = this._searchHistoryMenu.actor;
+                if (actor?.get_parent?.())
+                    actor.get_parent().remove_child(actor);
+                this._searchHistoryMenu.destroy();
+            } catch (_) {}
+            this._searchHistoryMenu = null;
+        }
+
         if (this._tooltip && this._tooltip.get_parent()) {
             this._tooltip.get_parent().remove_child(this._tooltip);
             this._tooltip.destroy();
@@ -2190,3 +2221,17 @@ class ClipMasterIndicator extends PanelMenu.Button {
         super.destroy();
     }
 });
+
+// Apply mixins once (prototype-level), so methods exist before _buildUI()
+Object.assign(
+    ClipMasterIndicator.prototype,
+    UIUtilsMixin,
+    ThemeManagerMixin,
+    PasteHandlerMixin,
+    ContextPanelsMixin,
+    NavigationHandlerMixin,
+    MenuLifecycleMixin,
+    ListManagerMixin,
+    ItemRendererMixin,
+    UIComponentsMixin
+);

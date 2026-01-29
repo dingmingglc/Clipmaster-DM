@@ -6,7 +6,7 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
-import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { TimeoutManager, FileUtils, HashUtils } from '../Util/Utils.js';
 import { ItemType, debugLog } from '../Util/Constants.js';
@@ -18,6 +18,9 @@ export class ClipboardDatabase {
         this._storagePath = storagePath || GLib.build_filenamev([
             GLib.get_user_data_dir(), 'clipmaster', 'clipboard.json'
         ]);
+        this._imagesStoragePath = this._storagePath.endsWith('.json')
+            ? this._storagePath.replace(/\.json$/, '.images.json')
+            : `${this._storagePath}.images.json`;
         this._settings = settings;
         this._onNotification = onNotification;
 
@@ -37,6 +40,13 @@ export class ClipboardDatabase {
         this._saveDebounceMs = 500;
 
         this._encryption = null;
+
+        // Fast duplicate lookup: contentHash -> itemId (newest)
+        this._contentIndex = new Map();
+
+        // Save state
+        this._isSaving = false;
+        this._saveAgainAfter = false;
 
         // Initialize image storage for cleanup operations
         this._imageStorage = new ImageStorage();
@@ -101,30 +111,59 @@ export class ClipboardDatabase {
     async _load() {
         try {
             const jsonStr = await FileUtils.loadTextFile(this._storagePath);
+            let loadedNonImages = [];
+            let loadedImages = [];
+            let loadedLists = [];
+            let loadedNextId = this._nextId;
+
             if (jsonStr) {
                 let decodedStr = jsonStr;
-
                 if (this._encryption && decodedStr.startsWith('ENC:')) {
                     decodedStr = this._encryption.decrypt(decodedStr.substring(4));
                 }
-
                 const data = JSON.parse(decodedStr);
-
-                // Merge pending items that might have been added during async load
-                const loadedItems = data.items || [];
-                if (this._pendingItems.length > 0) {
-                    // Add pending items to the top if they are newer
-                    this._items = [...this._pendingItems, ...loadedItems];
-                    this._pendingItems = [];
-                    this._isDirty = true; // Need to save the merge
-                } else {
-                    this._items = loadedItems;
-                }
-
-                this._lists = data.lists || [];
-                this._nextId = Math.max(data.nextId || 1, this._nextId);
+                const mainItems = data.items || [];
+                const mainImages = mainItems.filter(i => i?.type === ItemType.IMAGE);
+                const mainNonImages = mainItems.filter(i => i?.type !== ItemType.IMAGE);
+                loadedNonImages = mainNonImages;
+                loadedImages = [...loadedImages, ...mainImages];
+                loadedLists = data.lists || [];
+                loadedNextId = Math.max(data.nextId || 1, loadedNextId);
             }
+
+            // Load image items from separate file (if exists)
+            const imagesStr = await FileUtils.loadTextFile(this._imagesStoragePath);
+            if (imagesStr) {
+                let decodedImagesStr = imagesStr;
+                if (this._encryption && decodedImagesStr.startsWith('ENC:')) {
+                    decodedImagesStr = this._encryption.decrypt(decodedImagesStr.substring(4));
+                }
+                const imgData = JSON.parse(decodedImagesStr);
+                loadedImages = imgData.items || [];
+                loadedNextId = Math.max(imgData.nextId || 1, loadedNextId);
+            }
+
+            const loadedItems = [...loadedNonImages, ...loadedImages];
+
+            // Merge pending items that might have been added during async load
+            if (this._pendingItems.length > 0) {
+                // Add pending items to the top if they are newer
+                this._items = [...this._pendingItems, ...loadedItems];
+                this._pendingItems = [];
+                this._isDirty = true; // Need to save the merge
+            } else {
+                this._items = loadedItems;
+            }
+
+            this._lists = loadedLists;
+            this._nextId = Math.max(loadedNextId, this._nextId);
             this._isLoaded = true;
+
+            // Ensure contentHash exists for all loaded items and rebuild indexes
+            this._rebuildContentIndex();
+            // Ensure nextId is always above max existing id
+            const maxId = this._items.reduce((m, i) => Math.max(m, i?.id ?? 0), 0);
+            this._nextId = Math.max(this._nextId, maxId + 1);
 
             if (this._isDirty) {
                 this._save();
@@ -136,6 +175,23 @@ export class ClipboardDatabase {
             this._pendingItems = [];
             // _lists initialized to [] in constructor
             this._isLoaded = true;
+            this._rebuildContentIndex();
+        }
+    }
+
+    _rebuildContentIndex() {
+        this._contentIndex.clear();
+        if (!this._items) return;
+
+        // Newest-first index (items are typically stored newest-first)
+        for (const item of this._items) {
+            if (!item) continue;
+            if (!item.contentHash) {
+                const combined = (item.title || '') + '||' + (item.content || '');
+                item.contentHash = HashUtils.hashContent(combined);
+            }
+            if (item.contentHash)
+                this._contentIndex.set(item.contentHash, item.id);
         }
     }
 
@@ -144,9 +200,13 @@ export class ClipboardDatabase {
 
         this._isDirty = true;
 
+        // Slightly longer debounce for large histories to reduce main-thread churn
+        const itemCount = this._items?.length || 0;
+        const debounceMs = itemCount >= 500 ? Math.max(this._saveDebounceMs, 1000) : this._saveDebounceMs;
+
         this._timeoutManager.add(
             GLib.PRIORITY_DEFAULT,
-            this._saveDebounceMs,
+            debounceMs,
             () => {
                 this._doSave();
                 return GLib.SOURCE_REMOVE;
@@ -169,25 +229,67 @@ export class ClipboardDatabase {
             return;
         }
 
+        if (this._isSaving) {
+            this._saveAgainAfter = true;
+            return;
+        }
+
+        this._isSaving = true;
         try {
+            const nonImageItems = this._items.filter(i => i?.type !== ItemType.IMAGE);
+            const imageItems = this._items.filter(i => i?.type === ItemType.IMAGE);
+
             const data = {
-                items: this._items,
+                items: nonImageItems,
                 lists: this._lists,
                 nextId: this._nextId
             };
+            const imageData = {
+                items: imageItems,
+                nextId: this._nextId
+            };
 
-            let jsonStr = JSON.stringify(data, null, 2);
+            // Serialize during idle to reduce chances of UI jank.
+            // Also avoid pretty-printing to reduce CPU + file size.
+            let jsonStr = '';
+            let imageJsonStr = '';
+            await new Promise(resolve => {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    try {
+                        jsonStr = JSON.stringify(data);
+                        imageJsonStr = JSON.stringify(imageData);
+                    } catch (e) {
+                        console.error(`ClipMaster: JSON stringify error: ${e.message}`);
+                        jsonStr = '';
+                        imageJsonStr = '';
+                    }
+                    resolve();
+                    return GLib.SOURCE_REMOVE;
+                });
+            });
+            if (!jsonStr)
+                return;
 
             if (this._encryption) {
                 jsonStr = 'ENC:' + this._encryption.encrypt(jsonStr);
+                imageJsonStr = imageJsonStr ? 'ENC:' + this._encryption.encrypt(imageJsonStr) : imageJsonStr;
             }
 
-            if (await FileUtils.saveTextFile(this._storagePath, jsonStr)) {
+            const mainSaved = await FileUtils.saveTextFile(this._storagePath, jsonStr);
+            const imagesSaved = await FileUtils.saveTextFile(this._imagesStoragePath, imageJsonStr);
+            if (mainSaved && imagesSaved) {
                 this._isDirty = false;
                 await this._checkDatabaseSize();
             }
         } catch (e) {
             console.error(`ClipMaster: Error saving database: ${e.message}`);
+        } finally {
+            this._isSaving = false;
+            if (this._saveAgainAfter) {
+                this._saveAgainAfter = false;
+                // If something dirtied the DB while saving, run one more save soon.
+                this._save();
+            }
         }
     }
 
@@ -272,41 +374,71 @@ export class ClipboardDatabase {
         const favorites = this._items.filter(i => i.isFavorite);
         let nonFavorites = this._items.filter(i => !i.isFavorite);
 
+        // Oldest first for removal
         nonFavorites.sort((a, b) => (a.created || 0) - (b.created || 0));
 
-        while (nonFavorites.length > 0) {
-            const testItems = [...favorites, ...nonFavorites];
-            const testData = {
-                items: testItems,
-                lists: this._lists,
-                nextId: this._nextId
-            };
+        // Estimate serialized size once, then subtract removed items.
+        // This avoids O(n^2) full-database JSON.stringify in a loop.
+        const encoder = new TextEncoder();
+        const baseOverhead =
+            encoder.encode('{"items":[],"lists":,"nextId":}'.replace(',"lists":', '')).length;
+        const listsPart = encoder.encode(JSON.stringify(this._lists || [])).length;
+        const nextIdPart = encoder.encode(String(this._nextId)).length;
 
-            let testJsonStr = JSON.stringify(testData, null, 2);
-            if (this._encryption) {
-                testJsonStr = 'ENC:' + this._encryption.encrypt(testJsonStr);
+        const itemSize = (it) => {
+            try {
+                return encoder.encode(JSON.stringify(it)).length;
+            } catch (_) {
+                return 0;
             }
+        };
 
-            const testSize = new TextEncoder().encode(testJsonStr).length;
+        const favSizes = favorites.map(itemSize);
+        const nonFavSizes = nonFavorites.map(itemSize);
 
-            if (testSize < maxSizeBytes * 0.95) {
-                break;
-            }
+        let totalPlain =
+            baseOverhead +
+            listsPart +
+            nextIdPart +
+            favSizes.reduce((a, b) => a + b, 0) +
+            nonFavSizes.reduce((a, b) => a + b, 0);
 
-            nonFavorites.shift();
+        // Apply rough encryption overhead: base64 expands by ~4/3, plus 'ENC:' prefix.
+        const estimatedTotal = () => {
+            if (!this._encryption) return totalPlain;
+            return 4 + Math.ceil(totalPlain * 4 / 3);
+        };
+
+        const target = maxSizeBytes * 0.95;
+        while (nonFavorites.length > 0 && estimatedTotal() >= target) {
+            const removed = nonFavorites.shift();
+            const removedBytes = nonFavSizes.shift() ?? itemSize(removed);
+            totalPlain -= removedBytes;
             removedCount++;
 
-            if (removedCount > 1000) {
+            // Clean up image file if it's a file-based image
+            if (removed?.type === ItemType.IMAGE &&
+                removed.metadata?.storedAs === 'file' &&
+                removed.content &&
+                this._imageStorage) {
+                try {
+                    this._imageStorage.deleteImage(removed.content);
+                } catch (e) {
+                    console.error(`ClipMaster: Error deleting image file during size cleanup: ${e.message}`);
+                }
+            }
+
+            if (removedCount > 2000) {
                 console.log('ClipMaster: Safety limit reached while cleaning database');
                 break;
             }
         }
 
         this._items = [...favorites, ...nonFavorites];
+        this._rebuildContentIndex();
 
-        if (removedCount > 0) {
+        if (removedCount > 0)
             this._saveImmediate();
-        }
 
         return removedCount;
     }
@@ -328,29 +460,40 @@ export class ClipboardDatabase {
         const combinedContent = (item.title || '') + '||' + (item.content || '');
         const contentHash = HashUtils.hashContent(combinedContent);
 
-        // Check both main items and pending items for duplicates
-        const existing = this._items.find(i => {
-            const iCombined = (i.title || '') + '||' + (i.content || '');
-            const iHash = HashUtils.hashContent(iCombined);
-            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
-        }) || this._pendingItems.find(i => {
-            const iCombined = (i.title || '') + '||' + (i.content || '');
-            const iHash = HashUtils.hashContent(iCombined);
-            return iHash === contentHash || i.contentHash === contentHash || i.hash === contentHash;
-        });
-
-        let skipDuplicates = true;
-        if (this._settings) {
-            skipDuplicates = this._settings.get_boolean('skip-duplicates');
-            debugLog(`skip-duplicates setting = ${skipDuplicates}`);
+        // Fast duplicate lookup via index (loaded items).
+        let existing = null;
+        const existingId = this._contentIndex.get(contentHash) ?? null;
+        if (existingId !== null && existingId !== undefined) {
+            existing = this._items.find(i => i.id === existingId) || null;
+            // Extra safety: ensure content actually matches (hash collision guard)
+            if (existing) {
+                const eCombined = (existing.title || '') + '||' + (existing.content || '');
+                if (eCombined !== combinedContent)
+                    existing = null;
+            }
         }
+
+        // Also check pending items (usually small)
+        if (!existing && this._pendingItems?.length) {
+            existing = this._pendingItems.find(i => {
+                const h = i.contentHash || i.hash || '';
+                if (h === contentHash) {
+                    const pCombined = (i.title || '') + '||' + (i.content || '');
+                    return pCombined === combinedContent;
+                }
+                return false;
+            }) || null;
+        }
+
+        const skipDuplicates = this._settings?.get_boolean('skip-duplicates') ?? true;
+        debugLog(`skip-duplicates setting = ${skipDuplicates}`);
 
         debugLog(`existing=${!!existing}, skipDuplicates=${skipDuplicates}`);
 
         if (existing && skipDuplicates) {
             debugLog(`Skipping duplicate, updating existing item`);
             existing.lastUsed = Date.now();
-            existing.useCount = (existing.useCount || 1) + 1;
+            existing.useCount = (existing.useCount ?? 0) + 1;
 
             // Only move to top if it's already in _items (main list)
             if (this._items.includes(existing)) {
@@ -387,6 +530,7 @@ export class ClipboardDatabase {
 
         if (this._isLoaded) {
             this._items.unshift(newItem);
+            this._contentIndex.set(contentHash, newItem.id);
         } else {
             this._pendingItems.push(newItem);
         }
@@ -495,6 +639,16 @@ export class ClipboardDatabase {
             }
 
             this._items.splice(index, 1);
+            if (item?.contentHash) {
+                const mapped = this._contentIndex.get(item.contentHash);
+                if (mapped === itemId) {
+                    this._contentIndex.delete(item.contentHash);
+                    // Find another item with same contentHash (rare)
+                    const fallback = this._items.find(i => i.contentHash === item.contentHash);
+                    if (fallback)
+                        this._contentIndex.set(item.contentHash, fallback.id);
+                }
+            }
             this._save();
             return true;
         }
@@ -546,6 +700,7 @@ export class ClipboardDatabase {
 
             // Re-sort by lastUsed/created (newest first)
             this._items.sort((a, b) => (b.lastUsed || b.created || 0) - (a.lastUsed || a.created || 0));
+            this._rebuildContentIndex();
 
             if (itemsToRemove.length > 0) {
                 debugLog(`enforceLimit: Removed ${itemsToRemove.length} old items`);
@@ -560,26 +715,50 @@ export class ClipboardDatabase {
      * @returns {number} Number of duplicates removed
      */
     cleanupDuplicates() {
-        const seen = new Map();
+        const seen = new Set();
         const toRemove = [];
 
         // Sort by created date (newest first) so we keep the newest version
         const sorted = [...this._items].sort((a, b) => (b.created || 0) - (a.created || 0));
 
         for (const item of sorted) {
-            // Use Title + Content combination for uniqueness check
-            const combinedContent = (item.title || '') + '||' + (item.content || '');
-            const hash = HashUtils.hashContent(combinedContent);
-            if (seen.has(hash)) {
+            if (!item) continue;
+
+            // Use cached contentHash when available; otherwise compute and cache
+            if (!item.contentHash) {
+                const combinedContent = (item.title || '') + '||' + (item.content || '');
+                item.contentHash = HashUtils.hashContent(combinedContent);
+            }
+
+            const hash = item.contentHash || '';
+            if (hash && seen.has(hash)) {
                 // This is a duplicate (older), mark for removal
                 toRemove.push(item.id);
             } else {
-                seen.set(hash, item.id);
+                if (hash) seen.add(hash);
             }
         }
 
         if (toRemove.length > 0) {
-            this._items = this._items.filter(i => !toRemove.includes(i.id));
+            // Clean up image files for removed items
+            for (const id of toRemove) {
+                const item = this._items.find(i => i.id === id);
+                if (!item) continue;
+                if (item.type === ItemType.IMAGE &&
+                    item.metadata?.storedAs === 'file' &&
+                    item.content &&
+                    this._imageStorage) {
+                    try {
+                        this._imageStorage.deleteImage(item.content);
+                    } catch (e) {
+                        console.error(`ClipMaster: Error deleting image file during duplicate cleanup: ${e.message}`);
+                    }
+                }
+            }
+
+            const removeSet = new Set(toRemove);
+            this._items = this._items.filter(i => !removeSet.has(i.id));
+            this._rebuildContentIndex();
             this._save();
             debugLog(`cleanupDuplicates: Removed ${toRemove.length} duplicate items`);
         }
@@ -604,6 +783,7 @@ export class ClipboardDatabase {
             this._items = [];
         }
         this._pendingItems = []; // Clear pending too
+        this._rebuildContentIndex();
         this._save();
     }
 
@@ -660,6 +840,7 @@ export class ClipboardDatabase {
         const item = this._items.find(i => i.id === itemId);
         if (item) {
             item.listId = listId;
+            item.isFavorite = true;
             this._save();
         }
     }
@@ -678,9 +859,17 @@ export class ClipboardDatabase {
             const data = JSON.parse(jsonString);
             if (data.items) {
                 data.items.forEach(item => {
-                    const hash = HashUtils.hashContent(item.content);
-                    if (!this._items.find(i => i.hash === hash)) {
+                    const combined = (item.title || '') + '||' + (item.content || '');
+                    const contentHash = HashUtils.hashContent(combined);
+                    const existingId = this._contentIndex.get(contentHash);
+                    const existing = existingId ? this._items.find(i => i.id === existingId) : null;
+                    const isSame = existing
+                        ? ((existing.title || '') + '||' + (existing.content || '')) === combined
+                        : false;
+
+                    if (!existing || !isSame) {
                         item.id = this._nextId++;
+                        item.contentHash = contentHash;
                         this._items.push(item);
                     }
                 });
@@ -693,6 +882,7 @@ export class ClipboardDatabase {
                     }
                 });
             }
+            this._rebuildContentIndex();
             this._save();
             return true;
         } catch (e) {
