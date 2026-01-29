@@ -185,7 +185,6 @@ export const NavigationHandlerMixin = {
 
         if (symbol === Clutter.KEY_Escape) {
             this._isPinned = false;
-            this._pinButton.remove_style_pseudo_class('checked');
             this.menu.close();
             return Clutter.EVENT_STOP;
         }

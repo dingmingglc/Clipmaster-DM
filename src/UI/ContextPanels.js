@@ -99,6 +99,7 @@ export const ContextPanelsMixin = {
             const contentText = contentEntry.get_clutter_text();
             contentText.set_single_line_mode(false);
             contentText.set_line_wrap(true);
+            contentText.set_activatable(false);
             contentEntry.set_clip_to_allocation(true);
             contentText.set_clip_to_allocation(true);
             contentText.connect('key-press-event', (actor, event) => {

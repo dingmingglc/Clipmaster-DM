@@ -146,7 +146,6 @@ export const MenuLifecycleMixin = {
         // Keep plainTextMode state across menu open/close
 
         this._isPinned = false;
-        this._pinButton.remove_style_pseudo_class('checked');
 
         // Rebuild lists bar (in case lists changed)
         this._buildListsBar();

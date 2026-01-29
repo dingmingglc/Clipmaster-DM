@@ -127,7 +127,7 @@ export const UIComponentsMixin = {
         this._header.add_child(headerIcon);
 
         const title = new St.Label({
-            text: 'ClipMaster',
+            text: 'ClipMaster DM',
             style_class: 'clipmaster-title',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
@@ -175,29 +175,6 @@ export const UIComponentsMixin = {
             }
         });
         this._header.add_child(this._plainTextButton);
-
-        // Pin button
-        this._pinButton = new St.Button({
-            style_class: 'clipmaster-toggle-button',
-            child: new St.Icon({ icon_name: 'view-pin-symbolic', icon_size: 16 }),
-            can_focus: false,
-            track_hover: true,
-        });
-        this._pinButton._tooltipText = _('Pin popup (keep open)');
-        this._pinButton.connect('notify::hover', (btn) => this._onButtonHover(btn));
-        this._pinButton.connect('button-press-event', (actor, event) => {
-            if (event.get_button() === 1) {
-                this._isPinned = !this._isPinned;
-                if (this._isPinned) {
-                    this._pinButton.add_style_pseudo_class('checked');
-                } else {
-                    this._pinButton.remove_style_pseudo_class('checked');
-                }
-                return Clutter.EVENT_STOP;
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
-        this._header.add_child(this._pinButton);
 
         // Clear all button (keeps favorites)
         this._clearAllButton = new St.Button({
