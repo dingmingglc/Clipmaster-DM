@@ -238,6 +238,17 @@
     spacing: 0;
 }
 
+/* Image preview (FileIcon) */
+.clipmaster-item-image-wrapper {
+    min-width: 48px;
+    min-height: 48px;
+    margin-right: 8px;
+}
+
+.clipmaster-item-image-preview {
+    border-radius: 4px;
+}
+
 /* Smiley/emoji grid */
 .clipmaster-icons-row {
     padding: 2px 8px;
@@ -2905,13 +2916,13 @@
 }
 
 .clipmaster-context-row {
-    spacing: 8px;
+    spacing: 2px;
 }
 
 .clipmaster-context-label {
     color: #a6adc8;
     font-size: 12px;
-    min-width: 60px;
+    min-width: 36px;
 }
 
 .clipmaster-context-entry {
@@ -2922,6 +2933,11 @@
     color: #cdd6f4;
     font-size: 12px;
     min-height: 24px;
+}
+
+.clipmaster-context-entry-content {
+    min-height: 80px;
+    height: 80px;
 }
 
 .clipmaster-context-entry:focus {

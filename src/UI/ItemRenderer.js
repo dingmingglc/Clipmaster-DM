@@ -4,6 +4,7 @@
  */
 
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
@@ -14,6 +15,7 @@ import { ItemType, debugLog } from '../Util/Constants.js';
 import { QrCodeGenerator } from '../Util/QrCodeGenerator.js';
 import { tr as _ } from '../Util/Translations.js';
 
+const IMAGE_PREVIEW_SIZE = 48;
 
 /**
  * ItemRenderer Mixin
@@ -99,6 +101,29 @@ export const ItemRendererMixin = {
             style_class: 'clipmaster-item-number',
         });
         row.add_child(numLabel);
+
+        // Image preview (similar to all-in-one-clipboard: FileIcon + icon_size)
+        if (item.type === ItemType.IMAGE && item.content) {
+            try {
+                const imageFile = Gio.File.new_for_path(item.content);
+                if (imageFile.query_exists(null)) {
+                    const imageWrapper = new St.Bin({
+                        style_class: 'clipmaster-item-image-wrapper',
+                        y_align: Clutter.ActorAlign.CENTER,
+                    });
+                    const imageIcon = new St.Icon({
+                        gicon: new Gio.FileIcon({ file: imageFile }),
+                        icon_size: IMAGE_PREVIEW_SIZE,
+                        style_class: 'clipmaster-item-image-preview',
+                    });
+                    imageWrapper.set_style(`min-height: ${IMAGE_PREVIEW_SIZE}px;`);
+                    imageWrapper.set_child(imageIcon);
+                    row.add_child(imageWrapper);
+                }
+            } catch (e) {
+                debugLog(() => `Image preview load failed: ${e.message}`);
+            }
+        }
 
         // Content box
         const contentBox = new St.BoxLayout({

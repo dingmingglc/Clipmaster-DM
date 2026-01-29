@@ -840,6 +840,7 @@ export class ClipboardDatabase {
         const item = this._items.find(i => i.id === itemId);
         if (item) {
             item.listId = listId;
+            item.isFavorite = true;
             this._save();
         }
     }

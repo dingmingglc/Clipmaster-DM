@@ -84,15 +84,30 @@ export const ContextPanelsMixin = {
             const contentLabel = new St.Label({
                 text: _('Content:'),
                 style_class: 'clipmaster-context-label',
-                y_align: Clutter.ActorAlign.CENTER,
+                y_align: Clutter.ActorAlign.START,
             });
             contentRow.add_child(contentLabel);
 
             const contentEntry = new St.Entry({
-                style_class: 'clipmaster-context-entry',
+                style_class: 'clipmaster-context-entry clipmaster-context-entry-content',
                 text: item.content || item.plainText || '',
                 x_expand: true,
+                y_expand: true,
                 can_focus: true,
+            });
+            // Make content entry multiline (textarea-like)
+            const contentText = contentEntry.get_clutter_text();
+            contentText.set_single_line_mode(false);
+            contentText.set_line_wrap(true);
+            contentEntry.set_clip_to_allocation(true);
+            contentText.set_clip_to_allocation(true);
+            contentText.connect('key-press-event', (actor, event) => {
+                const symbol = event.get_key_symbol();
+                if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_KP_Enter) {
+                    actor.insert_text('\n', -1);
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
             });
             contentRow.add_child(contentEntry);
 
@@ -101,6 +116,7 @@ export const ContextPanelsMixin = {
                 child: new St.Icon({ icon_name: 'object-select-symbolic', icon_size: 14 }),
                 can_focus: false,
             });
+            saveContentBtn.y_align = Clutter.ActorAlign.START;
             saveContentBtn.connect('clicked', () => {
                 const newContent = contentEntry.get_text();
                 this._database.updateItem(item.id, {
