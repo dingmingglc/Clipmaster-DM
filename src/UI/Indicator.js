@@ -1,5 +1,5 @@
 /*
- * ClipMaster Custom - Panel Indicator with Full UI
+ * ClipMaster DM - Panel Indicator with Full UI
  * Uses standard PopupMenu for Dash to Panel compatibility
  */
 
@@ -26,7 +26,7 @@ import { tr as _, initTranslations } from '../Util/Translations.js';
 export const ClipMasterIndicator = GObject.registerClass(
 class ClipMasterIndicator extends PanelMenu.Button {
     _init(extension) {
-        super._init(0.0, 'ClipMaster Custom');
+        super._init(0.0, 'ClipMaster DM');
 
         this._extension = extension;
         this._settings = extension._settings;
@@ -79,7 +79,7 @@ class ClipMasterIndicator extends PanelMenu.Button {
         });
         global.stage.add_child(this._tooltip);
 
-        debugLog('ClipMaster Custom Indicator initialized');
+        debugLog('ClipMaster DM Indicator initialized');
     }
 
     _buildUI() {

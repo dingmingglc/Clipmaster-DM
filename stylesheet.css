@@ -1,4 +1,5 @@
 /* ClipMaster - GNOME Shell Extension Stylesheet */
+/* Note: "spacing" is a St/Clutter layout property (not standard CSS). Linter may warn; safe to ignore. */
 
 /* ============================================
    Main Popup Window - Follows GNOME HIG
@@ -2720,7 +2721,7 @@
     color: #575f66 !important;
 }
 /* ============================================
-   Custom Styles for ClipMaster Custom
+   Custom Styles for ClipMaster DM
    ============================================ */
 
 /* Menu Box Override */

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="org.gnome.shell.extensions.clipmaster-custom" path="/org.gnome.shell.extensions.clipmaster-custom/">
+  <schema id="org.gnome.shell.extensions.clipmaster-dm" path="/org.gnome.shell.extensions.clipmaster-dm/">
     
     <!-- Keyboard Shortcuts -->
     <key name="toggle-popup" type="as">
-      <default>['&lt;Shift&gt;&lt;Super&gt;v']</default>
+      <default>['F2']</default>
       <summary>Toggle clipboard popup</summary>
       <description>Keyboard shortcut to show/hide the clipboard popup</description>
     </key>
@@ -70,7 +70,7 @@
     </key>
     
     <key name="paste-on-select" type="b">
-      <default>true</default>
+      <default>false</default>
       <summary>Paste on selection</summary>
       <description>Automatically paste when selecting an item</description>
     </key>
@@ -110,7 +110,7 @@
     <!-- Display Settings -->
     
     <key name="text-include-url-code" type="b">
-      <default>false</default>
+      <default>true</default>
       <summary>Text includes URL and Code</summary>
       <description>When enabled, Text filter will also include URL and Code types</description>
     </key>
@@ -158,15 +158,15 @@
     
     <!-- Appearance Settings -->
     <key name="popup-width" type="i">
-      <default>450</default>
-      <range min="300" max="800"/>
+      <default>380</default>
+      <range min="350" max="800"/>
       <summary>Popup width</summary>
       <description>Width of the popup window in pixels</description>
     </key>
     
     <key name="popup-height" type="i">
-      <default>550</default>
-      <range min="300" max="900"/>
+      <default>600</default>
+      <range min="500" max="900"/>
       <summary>Popup height</summary>
       <description>Height of the popup window in pixels</description>
     </key>
@@ -224,4 +224,3 @@
     
   </schema>
 </schemalist>
-

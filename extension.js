@@ -1,5 +1,5 @@
 /*
- * ClipMaster Custom - GNOME Shell Extension
+ * ClipMaster DM - GNOME Shell Extension
  * Based on ClipMaster, modified for Dash to Panel compatibility
  */
 
@@ -46,7 +46,7 @@ export default class ClipMasterCustomExtension extends Extension {
 
         // Initialize database asynchronously
         this._database.init().catch(e => {
-            console.error(`ClipMaster Custom: Database initialization error: ${e.message}`);
+            console.error(`ClipMaster DM: Database initialization error: ${e.message}`);
         });
 
         this._monitor = new ClipboardMonitor(
@@ -59,7 +59,7 @@ export default class ClipMasterCustomExtension extends Extension {
         // Create indicator (contains the full UI as standard PopupMenu)
         if (this._settings.get_boolean('show-indicator')) {
             this._indicator = new ClipMasterIndicator(this);
-            Main.panel.addToStatusArea('clipmaster-custom', this._indicator);
+            Main.panel.addToStatusArea('clipmaster-dm', this._indicator);
         }
 
         this._bindShortcuts();
@@ -72,7 +72,7 @@ export default class ClipMasterCustomExtension extends Extension {
             'show-indicator-changed'
         );
 
-        console.log('ClipMaster Custom extension enabled');
+        console.log('ClipMaster DM extension enabled');
     }
 
     disable() {
@@ -100,7 +100,7 @@ export default class ClipMasterCustomExtension extends Extension {
 
         this._settings = null;
 
-        console.log('ClipMaster Custom extension disabled');
+        console.log('ClipMaster DM extension disabled');
     }
 
     _updateIndicatorVisibility() {
@@ -108,7 +108,7 @@ export default class ClipMasterCustomExtension extends Extension {
         
         if (showIndicator && !this._indicator) {
             this._indicator = new ClipMasterIndicator(this);
-            Main.panel.addToStatusArea('clipmaster-custom', this._indicator);
+            Main.panel.addToStatusArea('clipmaster-dm', this._indicator);
         } else if (!showIndicator && this._indicator) {
             this._indicator.destroy();
             this._indicator = null;

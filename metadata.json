@@ -1,16 +1,12 @@
 {
-  "description": "ClipMaster Custom - Clipboard manager with inline edit panels and QR code support.",
-  "gettext-domain": "clipmaster-custom",
-  "name": "ClipMaster Custom",
-  "settings-schema": "org.gnome.shell.extensions.clipmaster-custom",
+  "description": "ClipMaster DM - Clipboard manager with inline edit panels and QR code support.",
+  "gettext-domain": "clipmaster-dm",
+  "name": "ClipMaster DM",
+  "settings-schema": "org.gnome.shell.extensions.clipmaster-dm",
   "shell-version": [
-    "45",
-    "46",
-    "47",
-    "48",
     "49"
   ],
-  "uuid": "clipmaster-custom@dm.extension",
+  "uuid": "clipmaster-dm@dingmingglc",
   "version": 1,
   "version-name": "1.0.0"
 }
